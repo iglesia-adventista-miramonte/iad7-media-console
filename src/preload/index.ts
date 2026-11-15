@@ -100,6 +100,18 @@ const api: MediaConsoleApi = {
   deleteMessage: (id) => invoke('message:delete', id),
   addCountdown: () => invoke('service:addCountdown'),
 
+  // Window capture
+  captureSources: () => invoke('capture:sources'),
+  addCapture: (source) => invoke('capture:add', source),
+  setCaptureSource: (id, source) => invoke('capture:setSource', id, source),
+
+  // YouTube download
+  youtubeLookup: (url) => invoke('youtube:lookup', url),
+  onYoutubeSetup: (cb) => listen<number | null>('youtube:setup', cb),
+  youtubeChoices: () => invoke('youtube:choices'),
+  youtubePickFolder: (current) => invoke('youtube:pickFolder', current),
+  addYoutube: (request) => invoke('youtube:add', request),
+
   // Shared folder
   getShared: () => invoke('shared:get'),
   onSharedChanged: (cb) => listen<SharedState>('shared:changed', cb),

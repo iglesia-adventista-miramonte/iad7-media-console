@@ -1,5 +1,6 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, screen, session, shell } from 'electron'
+import { app, BrowserWindow, desktopCapturer, dialog, ipcMain, Menu, screen, session, shell } from 'electron'
 import { randomUUID } from 'node:crypto'
+import { isAbsolute } from 'node:path'
 import appIcon from '../../build/icon.png?asset'
 import type {
   BibleOptions,
@@ -23,7 +24,10 @@ import type {
   Settings,
   Target,
   TextStyle,
-  TextStyleKind
+  TextStyleKind,
+  CaptureSource,
+  YoutubeChoices,
+  YoutubeRequest
 } from '../shared/types'
 import * as audio from './audio'
 import * as bible from './bible'
@@ -58,6 +62,7 @@ import { createService, loadService, withUniqueName } from './serviceStore'
 import { loadSettings, saveSettings } from './settings'
 import * as textStyles from './textStyles'
 import { connectUpdater, installUpdateNow, updateStatus } from './updater'
+import * as youtube from './youtube'
 import {
   closeTestWindows,
   onTestWindowsChanged,
@@ -314,6 +319,37 @@ function registerIpc(): void {
   ipcMain.handle('service:get', () => serviceStateFull())
   ipcMain.handle('service:addCountdown', () => svc.addCountdown())
 
+  // ---- Window capture ----
+  ipcMain.handle('capture:sources', () => captureSources())
+  ipcMain.handle('capture:add', (_e, source: { id: string; name: string }) => svc.addCapture(source))
+  ipcMain.handle('capture:setSource', (_e, id: string, source: { id: string; name: string }) =>
+    svc.updateItem(id, { settings: { captureId: source.id, captureName: source.name } })
+  )
+
+  // ---- YouTube download ----
+  ipcMain.handle('youtube:lookup', async (_e, url: string) => {
+    try {
+      const info = await youtube.lookup(url, (fraction) => controlWindow?.webContents.send('youtube:setup', fraction))
+      return { info }
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+  ipcMain.handle('youtube:choices', () => youtubeChoices())
+  ipcMain.handle('youtube:pickFolder', async (_e, current: string) => {
+    if (!controlWindow) return null
+    const result = await dialog.showOpenDialog(controlWindow, { properties: ['openDirectory', 'createDirectory'], defaultPath: current })
+    return result.canceled ? null : (result.filePaths[0] ?? null)
+  })
+  ipcMain.handle('youtube:add', (_e, request: YoutubeRequest) => {
+    // A typed folder that is not a full path (for example "videos"): use the Downloads folder.
+    if (!isAbsolute(request.folder.trim())) request = { ...request, folder: app.getPath('downloads') }
+    else request = { ...request, folder: request.folder.trim() }
+    settings.youtube = { mode: request.mode, height: request.height, folder: request.folder }
+    saveSettings(settings)
+    return svc.addYoutube(request)
+  })
+
   // ---- Services ----
   ipcMain.handle('services:new', () => openService(withUniqueName(createService(stage.programTemplate()))))
   ipcMain.handle('presets:start', (_e, id: string) => {
@@ -565,7 +601,9 @@ function registerIpc(): void {
 
 /**
  * Let the app windows list the audio output devices with their names and
- * choose one (setSinkId). Only the app's own pages ask for this.
+ * choose one (setSinkId), and show the picture of another program's window
+ * (window capture items). Only the app's own pages ask for this. Camera and
+ * microphone are never allowed.
  */
 function allowAudioDevices(): void {
   const ownPage = (url: string) => url.startsWith('file://') || url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1')
@@ -574,8 +612,40 @@ function allowAudioDevices(): void {
     return true
   })
   session.defaultSession.setPermissionRequestHandler((_wc, permission, callback, details) => {
-    callback(permission === 'speaker-selection' ? ownPage(details.requestingUrl) : permission !== 'media')
+    if (permission === 'speaker-selection') return callback(ownPage(details.requestingUrl))
+    if (permission === 'media') {
+      // A window capture asks for video only (no sound). This is a picture of a window, not the camera.
+      const types = 'mediaTypes' in details ? (details.mediaTypes ?? []) : []
+      return callback(ownPage(details.requestingUrl) && types.length > 0 && types.every((t) => t === 'video'))
+    }
+    callback(true)
   })
+}
+
+/**
+ * The windows of other programs that a window capture item can show. The
+ * windows of this app are not in the list (a screen that shows itself).
+ */
+async function captureSources(): Promise<CaptureSource[]> {
+  const own = new Set(
+    BrowserWindow.getAllWindows()
+      .filter((w) => !w.isDestroyed())
+      .map((w) => w.getMediaSourceId().split(':').slice(0, 2).join(':'))
+  )
+  const sources = await desktopCapturer.getSources({ types: ['window'], thumbnailSize: { width: 320, height: 180 }, fetchWindowIcons: true })
+  return sources
+    .filter((s) => !own.has(s.id.split(':').slice(0, 2).join(':')) && s.name.trim())
+    .map((s) => ({
+      id: s.id,
+      name: s.name,
+      thumbnail: s.thumbnail.toDataURL(),
+      appIcon: s.appIcon && !s.appIcon.isEmpty() ? s.appIcon.toDataURL() : undefined
+    }))
+}
+
+/** The choices of the last YouTube download. The first time: video, 1080 lines, the Downloads folder. */
+function youtubeChoices(): YoutubeChoices {
+  return { mode: 'video', height: 1080, folder: app.getPath('downloads'), ...settings.youtube }
 }
 
 function setShared(path: string | null): void {

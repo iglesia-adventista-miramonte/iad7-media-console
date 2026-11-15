@@ -316,3 +316,28 @@
   right: 0;
   z-index: 5;
 }
+
+/* Window capture: the window cannot be shown (preview only). */
+.capture-problem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8%;
+  text-align: center;
+  color: #c9ccd1;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* Window capture: the kept part of the window, as large as fits, centered. */
+.capture-layer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  container-type: size;
+}
+.capture-box {
+  position: relative;
+  overflow: hidden;
+  width: min(100cqw, calc(100cqh * var(--ratio)));
+}

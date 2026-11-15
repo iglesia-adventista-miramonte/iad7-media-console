@@ -4,6 +4,7 @@ import { formatTime, strings } from '../strings'
 import { ScreenView, type PlaybackReport } from '../view/ScreenView'
 import { useAudioDevices } from './AudioTab'
 import { BiblePreview, SongPreview } from './BiblePreview'
+import { CapturePreview } from './CaptureItem'
 import { useHymnalState } from './hooks'
 import { HymnMusicOptions, playableAudio, SlideTime } from './HymnalView'
 import { MediaButton } from './MediaIcons'
@@ -55,6 +56,7 @@ export function PreviewPanel({ state, item }: { state: ServiceState; item: Servi
   }
   if (item.type === 'song') return <SongPreview key={item.id} state={state} item={item} />
   if (item.type === 'countdown') return <CountdownPreview key={item.id} state={state} item={item} />
+  if (item.type === 'capture') return <CapturePreview key={item.id} state={state} item={item} />
   return <ItemPreview key={item.id} state={state} item={item} />
 }
 
@@ -108,7 +110,7 @@ function ItemPreview({ state, item }: { state: ServiceState; item: ServiceItem }
     <section className="panel preview">
       <div className="preview-head">
         <h2 className="label">{strings.previewLabel}</h2>
-        <div className="preview-title" title={item.path}>
+        <div className="preview-title" title={item.youtube ? `${item.youtube.url}\n${item.path}` : item.path}>
           <span className="selected-title">{item.title}</span>
           <span className="dim mono">{metaLine(item)}</span>
         </div>
@@ -131,7 +133,11 @@ function ItemPreview({ state, item }: { state: ServiceState; item: ServiceItem }
               }}
             />
           )}
-          {!ready && <span className="dim preview-wait">{item.cache === 'error' ? item.cacheError : strings.notReady}</span>}
+          {!ready && (
+            <span className="dim preview-wait">
+              {item.cache === 'error' ? item.cacheError : item.youtube && !item.path ? `${strings.notReadyDownload} (${strings.cacheStates(item)})` : strings.notReady}
+            </span>
+          )}
           {item.type === 'audio' && ready && <span className="preview-wait audio-preview">♪ {strings.audioItemNote}</span>}
           {item.type === 'video' && ready && <span className="preview-muted">{strings.previewMuted}</span>}
         </div>
@@ -198,7 +204,7 @@ export function NotesAndStatus({ item }: { item: ServiceItem }) {
       )}
       {item.cache === 'error' && (
         <button className="btn btn-small" onClick={() => void api.retryCopy(item.id)}>
-          {strings.retryCopy}
+          {item.youtube && !item.path ? strings.retryDownload : strings.retryCopy}
         </button>
       )}
       <button className="btn btn-small btn-quiet" onClick={() => void api.removeItem(item.id)}>

@@ -90,6 +90,63 @@ export interface Settings {
   hymnalFolder?: string
   /** The paired presenter clicker (SPEC 5.8). */
   clicker?: ClickerSettings
+  /** The last choices in the YouTube dialog, so the next download starts with them. */
+  youtube?: YoutubeChoices
+}
+
+// ---- YouTube download (yt-dlp) ----
+
+/** Video (MP4) or only the sound (MP3). */
+export type YoutubeMode = 'video' | 'audio'
+
+export interface YoutubeChoices {
+  mode: YoutubeMode
+  /** Largest picture height for videos, for example 1080. */
+  height: number
+  /** The folder the files are saved in. */
+  folder: string
+}
+
+/** What the YouTube dialog shows after it looked up a link. */
+export interface YoutubeInfo {
+  id: string
+  /** The link of the video page. */
+  url: string
+  title: string
+  channel: string
+  /** Seconds, or 0 when not known (a live stream). */
+  duration: number
+  /** A small picture of the video, as a data: URL. */
+  thumbnail?: string
+  /** Picture heights that can be downloaded, largest first, with the size of the file in bytes (0 = not known). */
+  heights: { height: number; bytes: number }[]
+  /** Size of the MP3 source in bytes (0 = not known). */
+  audioBytes: number
+}
+
+/** A playlist item that comes from YouTube: what to download. */
+export interface YoutubeSource {
+  url: string
+  mode: YoutubeMode
+  height: number
+  folder: string
+}
+
+/** What the YouTube dialog asks for. */
+export interface YoutubeRequest extends YoutubeSource {
+  title: string
+  duration: number
+}
+
+/** The window capture dialog: one window of another program. */
+export interface CaptureSource {
+  /** desktopCapturer id, for example "window:12345:0". It changes when the program is opened again. */
+  id: string
+  name: string
+  /** Small picture of the window (data: URL). */
+  thumbnail: string
+  /** Icon of the program (data: URL), when Windows gives one. */
+  appIcon?: string
 }
 
 // ---- Hymnal (pictures and music of each hymn, from a folder) ----
@@ -466,7 +523,7 @@ export interface TestInfo {
 // ---- Service order (SPEC section 4) ----
 
 /** Item types supported so far. More types come in later steps. */
-export type ItemType = 'video' | 'image' | 'slides' | 'bible' | 'song' | 'folder' | 'audio' | 'countdown'
+export type ItemType = 'video' | 'image' | 'slides' | 'bible' | 'song' | 'folder' | 'audio' | 'countdown' | 'capture'
 
 export type ItemStatus = 'pending' | 'live' | 'done'
 
@@ -518,6 +575,16 @@ export interface ItemSettings {
   mode?: 'full' | 'lower'
   /** Show the same verses in a second version (bilingual services). */
   secondBibleId?: string | null
+  // Window capture
+  /** desktopCapturer id of the window to show. */
+  captureId?: string
+  /** The title of the window when it was chosen. */
+  captureName?: string
+  /** Cut off this part of the window (in % of its width or height), for example the tabs and address bar of a browser. */
+  cropTop?: number
+  cropBottom?: number
+  cropLeft?: number
+  cropRight?: number
   // Countdown (SPEC 6)
   /** Count a duration, or count to a clock time. */
   countdownMode?: 'duration' | 'until'
@@ -601,8 +668,10 @@ export type BibleSearchResult =
 /**
  * State of the local cached copy of an item's file. Slides also go through
  * "converting" (.pptx to PDF) and "rendering" (PDF pages to pictures).
+ * YouTube items first go through "downloading" (and "converting": joining
+ * picture and sound, or making the MP3).
  */
-export type CacheState = 'copying' | 'converting' | 'rendering' | 'ready' | 'error'
+export type CacheState = 'downloading' | 'copying' | 'converting' | 'rendering' | 'ready' | 'error'
 
 export interface ServiceItem {
   id: string
@@ -635,6 +704,8 @@ export interface ServiceItem {
   stanzas?: string[]
   /** A hymn from the hymnal folder: a slides item (the pictures) with music. */
   hymn?: HymnChoice
+  /** A video or audio item downloaded from YouTube. `path` is the downloaded file (empty until the download ends). */
+  youtube?: YoutubeSource
   /** Folder: the chosen file, and that file as an item (copied and converted like any item). */
   folderChoice?: string
   child?: ServiceItem
@@ -986,6 +1057,26 @@ export interface MediaConsoleApi {
   deleteMessage(id: string): Promise<void>
   /** Add a countdown item to the order (5:00). */
   addCountdown(): Promise<void>
+
+  // Window capture
+  /** The windows of other programs that can be shown on the screens. */
+  captureSources(): Promise<CaptureSource[]>
+  /** Add a window capture item to the order. Returns its id. */
+  addCapture(source: { id: string; name: string }): Promise<string>
+  /** Show another window in a window capture item. */
+  setCaptureSource(itemId: string, source: { id: string; name: string }): Promise<void>
+
+  // YouTube download
+  /** Look up a YouTube link: title, length and the sizes that can be downloaded. Gets the downloader first if needed. */
+  youtubeLookup(url: string): Promise<{ info?: YoutubeInfo; error?: string }>
+  /** Progress (0..1) while the downloader is being set up (only the first time). */
+  onYoutubeSetup(callback: (fraction: number | null) => void): () => void
+  /** The choices of the last download (mode, size, folder). */
+  youtubeChoices(): Promise<YoutubeChoices>
+  /** Show a folder dialog. Returns the chosen folder, or null. */
+  youtubePickFolder(current: string): Promise<string | null>
+  /** Add the item to the order and start the download. Returns its id. */
+  addYoutube(request: YoutubeRequest): Promise<string>
 
   // Bible
   /** Show a file dialog and import a Bible file. Returns an error text, or null. */

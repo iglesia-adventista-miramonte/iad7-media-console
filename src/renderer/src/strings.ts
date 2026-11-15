@@ -52,6 +52,54 @@ export const strings = {
   addMenuFiles: 'Files…',
   addMenuFilesHint: 'Videos, pictures, audio, PDF or PowerPoint',
   addMenuFolder: 'Folder…',
+  addMenuYoutube: 'YouTube video…',
+  addMenuYoutubeHint: 'Download a video or a song from a YouTube link',
+  addMenuCapture: 'Window capture…',
+  addMenuCaptureHint: 'Show a window of another program, for example Brave',
+
+  // Window capture
+  captureDialogTitle: 'Show a window',
+  captureDialogHelp:
+    'Choose the window to show on the screens. Keep that window open and not minimized (it can be behind other windows). Its sound plays from that program, not from this app.',
+  captureRefresh: 'Refresh',
+  captureLoading: 'Looking for windows…',
+  captureNone: 'No windows found. Open the program (for example Brave), then click Refresh.',
+  captureCancel: 'Cancel',
+  captureMissing: 'This window was not found. The program may be closed. Open it, then use "Change window…".',
+  captureClosed: 'The window was closed. Open it again, then use "Change window…".',
+  captureChange: 'Change window…',
+  captureFrom: (name: string) => `Window: ${name}`,
+  captureNote: 'Live picture of the window. Do not minimize it. The sound comes from that program.',
+  captureCrop: 'Cut off edges',
+  captureCropHint: 'Use Top to hide the tabs and the address bar of a browser. Or press F11 in the browser for full screen.',
+  cropSides: { cropTop: 'Top', cropBottom: 'Bottom', cropLeft: 'Left', cropRight: 'Right' } as Record<'cropTop' | 'cropBottom' | 'cropLeft' | 'cropRight', string>,
+  cropReset: 'No cut',
+
+  // YouTube download
+  ytTitle: 'Add a YouTube video',
+  ytLinkPlaceholder: 'Paste a YouTube link here',
+  ytLookup: 'Look up',
+  ytLooking: 'Looking up the video…',
+  ytSetup: (fraction: number) => `Getting the YouTube downloader (only the first time)… ${Math.round(fraction * 100)}%`,
+  ytKind: 'Download',
+  ytVideo: 'Video (MP4)',
+  ytAudio: 'Sound only (MP3)',
+  ytQuality: 'Picture size',
+  ytAudioNote: 'An MP3 is an audio item: it plays on the audio layer, like other music in the playlist.',
+  ytSaveIn: 'Save in',
+  ytChange: 'Change…',
+  ytCancel: 'Cancel',
+  ytAdd: 'Download and add',
+  ytHelp: 'The item is added to the playlist now, and the row shows the download. It can go live when it is ready.',
+  ytRights: 'Download only videos that the church may show.',
+  ytBigNote: 'Large sizes take longer to download and need a fast computer. 1080 is enough for most projectors.',
+  ytHeight: (h: number) => (h >= 2160 ? '4K' : h >= 1440 ? '1440' : `${h}`),
+  ytBytes: (bytes: number) => (bytes ? (bytes >= 1e9 ? `${(bytes / 1e9).toFixed(1)} GB` : `${Math.max(1, Math.round(bytes / 1e6))} MB`) : ''),
+  ytLive: 'live',
+  downloadError: 'download failed',
+  retryDownload: 'Download again',
+  notReadyDownload: 'The file is downloading. It can go live when the download and the copy are ready.',
+  fromYoutube: 'from YouTube',
   progress: (done: number, total: number) => `${done} of ${total} done`,
   resetProgress: 'Reset',
   resetProgressHint: 'Mark all items as not done',
@@ -65,7 +113,7 @@ export const strings = {
   copyError: 'error',
   typeVideo: 'Video',
   typeImage: 'Image',
-  types: { video: 'Video', image: 'Image', slides: 'Slides', bible: 'Bible', song: 'Song', folder: 'Folder', audio: 'Audio', countdown: 'Countdown' } as Record<ItemType, string>,
+  types: { video: 'Video', image: 'Image', slides: 'Slides', bible: 'Bible', song: 'Song', folder: 'Folder', audio: 'Audio', countdown: 'Countdown', capture: 'Window capture' } as Record<ItemType, string>,
   stanzaCount: (n: number) => (n === 1 ? '1 stanza' : `${n} stanzas`),
   fileCount: (n: number) => `${n} files`,
   indexing: (fraction: number) => `indexing ${Math.round(fraction * 100)}%`,
@@ -207,6 +255,8 @@ export const strings = {
   slideCount: (n: number) => (n === 1 ? '1 slide' : `${n} slides`),
   cacheStates: (item: ServiceItem): string => {
     const pct = Math.round((item.cacheProgress ?? 0) * 100)
+    if (item.cache === 'downloading') return `downloading ${pct}%`
+    if (item.cache === 'converting' && item.youtube) return item.youtube.mode === 'audio' ? 'making MP3…' : 'joining picture and sound…'
     if (item.cache === 'copying') return `copying ${pct}%`
     if (item.cache === 'converting') return 'converting to PDF…'
     if (item.cache === 'rendering') return `making pages ${pct}%`

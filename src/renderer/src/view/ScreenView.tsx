@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { ContentLayer, OutputRender, Overlays, TextLayer } from '../../../shared/types'
 import { formatCountdown, useNow } from './clock'
 import { applyDevice, meterElement } from './levelMeter'
 import { TextView } from './TextView'
+import { strings } from '../strings'
 import './view.css'
 
 // One screen picture: idle screen, content, overlays (from bottom to top).
@@ -32,6 +33,10 @@ export interface ScreenViewProps {
   /** Sound of videos: master volume (0..1) and output device. Only used with `audio`. */
   itemsVolume?: number
   audioDevice?: string
+  /** Window capture: pictures per second. Small copies use fewer, so the computer does less work. */
+  captureFps?: number
+  /** Window capture: say on the picture when the window cannot be shown (preview only, never on a screen). */
+  captureHint?: boolean
 }
 
 const fadeSeconds = 1
@@ -52,6 +57,7 @@ export function ScreenView(props: ScreenViewProps) {
       {content?.type === 'image' && <ImageContent key={content.take} content={content} />}
       {content?.type === 'slides' && <SlidesContent key={content.take} content={content} />}
       {content?.type === 'countdown' && <CountdownContent content={content} logoUrl={props.logoUrl} />}
+      {content?.type === 'capture' && <CaptureContent content={content} fps={props.captureFps ?? 30} hint={!!props.captureHint} />}
       {content?.type === 'video' && (
         <VideoContent
           key={content.take}
@@ -133,6 +139,88 @@ function CountdownContent({ content, logoUrl }: { content: ContentLayer; logoUrl
       {content.settings.textAbove && <div className="countdown-above">{content.settings.textAbove}</div>}
       <div className="countdown-time">{formatCountdown(seconds)}</div>
     </div>
+  )
+}
+
+/**
+ * A window of another program (a browser, for example), live. The picture
+ * comes from Windows (desktopCapturer); the sound is not taken, so it plays
+ * from that program itself. When the window is closed or minimized, the
+ * picture stops: the screen shows black, and the preview says why.
+ */
+function CaptureContent({ content, fps, hint }: { content: ContentLayer; fps: number; hint: boolean }) {
+  const s = content.settings
+  const ref = useRef<HTMLVideoElement>(null)
+  const [problem, setProblem] = useState<'missing' | 'closed' | null>(null)
+  const id = s.captureId
+
+  useEffect(() => {
+    if (!id) return
+    let stream: MediaStream | null = null
+    let stopped = false
+    setProblem(null)
+    const constraints = {
+      audio: false,
+      video: { mandatory: { chromeMediaSource: 'desktop', chromeMediaSourceId: id, maxFrameRate: fps, maxWidth: 3840, maxHeight: 2160 } }
+    } as unknown as MediaStreamConstraints
+    navigator.mediaDevices
+      .getUserMedia(constraints)
+      .then((s) => {
+        if (stopped) return s.getTracks().forEach((t) => t.stop())
+        stream = s
+        const track = s.getVideoTracks()[0]
+        track?.addEventListener('ended', () => setProblem('closed'))
+        if (ref.current) {
+          ref.current.srcObject = s
+          void ref.current.play().catch(() => {})
+        }
+      })
+      .catch(() => !stopped && setProblem('missing'))
+    return () => {
+      stopped = true
+      stream?.getTracks().forEach((t) => t.stop())
+      if (ref.current) ref.current.srcObject = null
+    }
+  }, [id, fps])
+
+  // Cut off the edges (for example the tabs and address bar of a browser).
+  // The part that stays is a box with its own width and height, centered on
+  // the screen; the video inside it is bigger and moved, so the cut parts are outside.
+  const [size, setSize] = useState<{ w: number; h: number } | null>(null)
+  const part = (v: number | undefined) => Math.max(0, Math.min(45, v ?? 0)) / 100
+  const t = part(s.cropTop)
+  const b = part(s.cropBottom)
+  const l = part(s.cropLeft)
+  const r = part(s.cropRight)
+  const keepW = 1 - l - r
+  const keepH = 1 - t - b
+  const ratio = size ? (size.w * keepW) / (size.h * keepH) : 16 / 9
+  return (
+    <>
+      <div className="layer capture-layer">
+        <div className="capture-box" style={{ '--ratio': ratio, aspectRatio: String(ratio) } as CSSProperties}>
+          <video
+            ref={ref}
+            style={{
+              position: 'absolute',
+              width: `${100 / keepW}%`,
+              height: `${100 / keepH}%`,
+              left: `${(-l / keepW) * 100}%`,
+              top: `${(-t / keepH) * 100}%`
+            }}
+            muted
+            autoPlay
+            onLoadedMetadata={(e) => setSize({ w: e.currentTarget.videoWidth, h: e.currentTarget.videoHeight })}
+            onResize={(e) => setSize({ w: e.currentTarget.videoWidth, h: e.currentTarget.videoHeight })}
+          />
+        </div>
+      </div>
+      {hint && problem && (
+        <div className="layer capture-problem">
+          <span>{problem === 'closed' ? strings.captureClosed : strings.captureMissing}</span>
+        </div>
+      )}
+    </>
   )
 }
 

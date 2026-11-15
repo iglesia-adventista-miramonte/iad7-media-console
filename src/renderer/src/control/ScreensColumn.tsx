@@ -117,6 +117,7 @@ export function GroupLiveView({ group, state }: { group: GroupView; state: Servi
       logoUrl={state.logoUrl}
       overlays={state.overlays}
       syncTime={playback?.currentTime}
+      captureFps={8}
     />
   )
 }

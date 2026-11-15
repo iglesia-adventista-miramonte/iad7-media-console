@@ -2938,3 +2938,127 @@
   color: var(--preview);
   font-size: 12px;
 }
+
+/* ---- Window capture dialog ---- */
+.capture-dialog {
+  width: min(860px, 94vw);
+  outline: none;
+}
+.capture-dialog .help {
+  margin: 0;
+}
+.capture-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px;
+  overflow-y: auto;
+  min-height: 140px;
+  padding: 2px;
+}
+.capture-source {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  text-align: left;
+  color: inherit;
+  background: var(--bg-card);
+  border: 1px solid var(--border-control);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.capture-source:hover,
+.capture-source:focus-visible {
+  border-color: var(--preview);
+}
+.capture-thumb {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  background: #000;
+  border-radius: 4px;
+}
+.capture-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  min-width: 0;
+}
+.capture-name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.crop-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 14px;
+}
+.crop-row {
+  display: grid;
+  grid-template-columns: 48px 1fr 44px;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ---- YouTube dialog ---- */
+.yt-dialog {
+  width: min(560px, 92vw);
+  outline: none;
+  overflow-y: auto;
+}
+.yt-dialog .help,
+.yt-dialog .warn,
+.yt-dialog p.dim {
+  margin: 0;
+}
+.yt-link-row {
+  display: flex;
+  gap: 8px;
+}
+.yt-link-row .input {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
+.yt-found {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.yt-thumb {
+  width: 160px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  flex: none;
+  background: #000;
+  border-radius: 6px;
+}
+.yt-found-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* Download progress in a playlist row. */
+.row-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.row-download-bar {
+  display: inline-block;
+  width: 46px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-control);
+  overflow: hidden;
+}
+.row-download-bar span {
+  display: block;
+  height: 100%;
+  background: var(--preview);
+  transition: width 0.2s linear;
+}

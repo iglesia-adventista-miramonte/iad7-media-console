@@ -25,7 +25,8 @@ import type {
   ShownTextStyle,
   Target,
   TextLayer,
-  UndoKind
+  UndoKind,
+  YoutubeRequest
 } from '../shared/types'
 import { sortedParts } from '../shared/program'
 import { bibleDefaults, buildScreens, getChapter, listBibles } from './bible'
@@ -35,6 +36,7 @@ import { findHymn, hymnAudioUrl } from './hymnal'
 import { bibleOptions, shownStyle } from './textStyles'
 import { prepareFile } from './prepare'
 import { saveService } from './serviceStore'
+import * as youtube from './youtube'
 
 // The service order and the live state of each group. The main process owns
 // this state; windows only show it and send commands.
@@ -142,6 +144,7 @@ export function defaultSettings(type: ItemType): ItemSettings {
   if (type === 'audio') return { autoDone: true, volume: 1 }
   if (type === 'countdown')
     return { autoDone: true, countdownMode: 'duration', countdownSeconds: 300, untilTime: '', textAbove: '', atZero: 'next', showOnStage: true }
+  if (type === 'capture') return { autoDone: false, cropTop: 0, cropBottom: 0, cropLeft: 0, cropRight: 0 }
   return { autoDone: true, fit: 'fit', autoNext: null }
 }
 
@@ -157,6 +160,10 @@ export function initService(loaded: Service): void {
       applyHymn(item)
       continue
     }
+    if (item.youtube) {
+      restoreItem(item)
+      continue
+    }
     if (!needsFile(item)) continue
     if (item.type === 'folder') {
       openFolderIndex(item.path)
@@ -167,15 +174,17 @@ export function initService(loaded: Service): void {
   }
 }
 
-/** Bible, countdown and typed text items have no file to copy. */
+/** Bible, countdown, window capture and typed text items have no file to copy. */
 function needsFile(item: ServiceItem): boolean {
-  return item.type !== 'bible' && item.type !== 'countdown' && !!item.path
+  return item.type !== 'bible' && item.type !== 'countdown' && item.type !== 'capture' && !!item.path
 }
 
 /** Copy again if the app stopped during a copy, or the cache was cleared. */
 function restoreItem(item: ServiceItem): void {
   item.settings = { ...defaultSettings(item.type), ...item.settings }
   if (item.status === 'live') item.status = 'pending'
+  // A YouTube item whose file is not there (the app closed during the download, or the file was deleted): download again.
+  if (item.youtube && (!item.path || !existsSync(item.path))) return startDownload(item)
   const pagesMissing = item.type === 'slides' && !item.pageUrls?.length
   if (item.cache !== 'ready' || !item.localCopyPath || !existsSync(item.localCopyPath) || pagesMissing) startCopy(item)
   else if (item.type !== 'slides') item.url = mediaUrl(item.localCopyPath)
@@ -381,8 +390,102 @@ function startCopy(item: ServiceItem): void {
 export function retryCopy(itemId: string): void {
   const item = findItem(itemId)
   if (item?.hymn) applyHymn(item)
+  else if (item?.youtube && item.cache === 'error' && (!item.path || !existsSync(item.path))) startDownload(item)
   else if (item && item.cache === 'error') startCopy(item)
   changed()
+}
+
+// ---- YouTube ----
+
+/** Downloads that run now, by item id. */
+const downloads = new Map<string, youtube.DownloadJob>()
+
+/** Add a YouTube video or song to the order. It downloads now; the row shows the progress. */
+export function addYoutube(request: YoutubeRequest): string {
+  saveUndo('add')
+  const type = request.mode === 'audio' ? 'audio' : 'video'
+  const item: ServiceItem = {
+    id: randomUUID(),
+    type,
+    title: request.title.trim() || 'YouTube',
+    path: '',
+    cache: 'downloading',
+    cacheProgress: 0,
+    status: 'pending',
+    duration: request.duration || undefined,
+    settings: defaultSettings(type),
+    youtube: { url: request.url, mode: request.mode, height: request.height, folder: request.folder }
+  }
+  service.items.push(item)
+  startDownload(item)
+  changed()
+  return item.id
+}
+
+/** Download the file of a YouTube item, then copy it to the media cache like any other file. */
+function startDownload(item: ServiceItem): void {
+  if (!item.youtube || downloads.has(item.id)) return
+  item.path = ''
+  item.cache = 'downloading'
+  item.cacheProgress = 0
+  item.cacheError = undefined
+  item.url = undefined
+  const job = youtube.download(item.youtube, (state, fraction) => {
+    item.cache = state
+    item.cacheProgress = fraction
+    changed({ save: false, outputs: false })
+  })
+  downloads.set(item.id, job)
+  job.done
+    .then((file) => {
+      item.path = file
+      startCopy(item)
+    })
+    .catch((err: Error) => {
+      item.cache = 'error'
+      item.cacheProgress = undefined
+      item.cacheError = err.message
+    })
+    .finally(() => {
+      downloads.delete(item.id)
+      changed()
+    })
+}
+
+/** Stop the downloads of items that are not in the order any more. */
+function stopRemovedDownloads(): void {
+  const ids = new Set(service.items.map((i) => i.id))
+  for (const [id, job] of downloads) {
+    if (ids.has(id)) continue
+    job.cancel()
+    downloads.delete(id)
+  }
+}
+
+/** Items that came back with Undo: a download that was stopped starts again. */
+function resumeDownloads(): void {
+  for (const item of service.items) {
+    if (item.youtube && !item.path && !downloads.has(item.id)) startDownload(item)
+  }
+}
+
+// ---- Window capture ----
+
+/** A window of another program (a browser, for example) as an item. */
+export function addCapture(source: { id: string; name: string }): string {
+  saveUndo('add')
+  const item: ServiceItem = {
+    id: randomUUID(),
+    type: 'capture',
+    title: source.name.trim() || 'Window',
+    path: '',
+    cache: 'ready',
+    status: 'pending',
+    settings: { ...defaultSettings('capture'), captureId: source.id, captureName: source.name }
+  }
+  service.items.push(item)
+  changed()
+  return item.id
 }
 
 export function removeItem(itemId: string): void {
@@ -390,6 +493,7 @@ export function removeItem(itemId: string): void {
   saveUndo('remove')
   clearGroups(groupsShowing(itemId), false, 'both')
   service.items = service.items.filter((i) => i.id !== itemId)
+  stopRemovedDownloads()
   changed()
 }
 
@@ -473,6 +577,7 @@ export function setDuration(itemId: string, seconds: number): void {
 
 export function isReady(item: ServiceItem): boolean {
   if (item.type === 'countdown') return true
+  if (item.type === 'capture') return !!item.settings.captureId
   if (item.type === 'folder') return !!item.child && isReady(item.child)
   if (item.type === 'song') return item.cache === 'ready' && !!item.stanzas?.length
   if (item.type === 'bible') return !!item.bible && listBibles().some((b) => b.id === item.bible!.bibleId)
@@ -599,7 +704,7 @@ function goLiveIn(groupIds: string[], itemId: string, page = 0): void {
         itemId: item.id,
         type: item.type,
         title: item.title,
-        url: item.url!,
+        url: item.url ?? '',
         settings: item.settings,
         take: t,
         playing: true,
@@ -823,6 +928,8 @@ function clearAllLive(): void {
 export function switchService(next: Service): void {
   flushSave()
   clearAllLive()
+  for (const job of downloads.values()) job.cancel()
+  downloads.clear()
   undoStack.length = 0
   initService(next)
   // Save at once, so the new service is in the list of services.
@@ -882,7 +989,7 @@ export function copyOrder(from: Service): void {
     service.items.push(item)
     if (item.hymn) applyHymn(item)
     else if (item.type === 'folder') openFolderIndex(item.path)
-    else if (needsFile(item)) restoreItem(item)
+    else if (needsFile(item) || item.youtube) restoreItem(item)
   }
   changed()
 }
@@ -1299,6 +1406,8 @@ export function undo(): void {
   const keep = new Set(last.items.map((i) => i.id))
   for (const item of service.items) if (!keep.has(item.id)) clearGroups(groupsShowing(item.id), false, 'both')
   service.items = last.items
+  stopRemovedDownloads()
+  resumeDownloads()
   changed()
 }
 

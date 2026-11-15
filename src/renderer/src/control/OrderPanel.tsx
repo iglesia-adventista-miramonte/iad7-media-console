@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react'
 import type { ServiceItem, ServiceState } from '../../../shared/types'
 import { formatTime, strings } from '../strings'
+import { CaptureDialog } from './CaptureItem'
 import { FolderBox } from './FolderBox'
 import { SharedSection } from './SharedSection'
+import { YoutubeDialog } from './YoutubeDialog'
 
 const api = window.mediaConsole
 const itemDragType = 'application/x-media-console-item'
@@ -14,6 +16,7 @@ export function OrderPanel(props: { state: ServiceState; selectedId: string | nu
   const items = state.service.items
   const [dropActive, setDropActive] = useState(false)
   const [skipped, setSkipped] = useState<string[]>([])
+  const [dialog, setDialog] = useState<'youtube' | 'capture' | null>(null)
   const done = items.filter((i) => i.status === 'done').length
 
   const showResult = (r: { skipped: string[] }) => setSkipped(r.skipped)
@@ -57,8 +60,23 @@ export function OrderPanel(props: { state: ServiceState; selectedId: string | nu
         <button className="tool-btn" onClick={() => void api.addCountdown()}>
           + {strings.addCountdown}
         </button>
-        <AddMenu onFiles={() => void api.pickFiles().then(showResult)} onFolder={() => void api.pickFolder()} />
+        <AddMenu
+          onFiles={() => void api.pickFiles().then(showResult)}
+          onFolder={() => void api.pickFolder()}
+          onYoutube={() => setDialog('youtube')}
+          onCapture={() => setDialog('capture')}
+        />
       </div>
+      {dialog === 'youtube' && <YoutubeDialog onClose={() => setDialog(null)} onAdded={onSelect} />}
+      {dialog === 'capture' && (
+        <CaptureDialog
+          onClose={() => setDialog(null)}
+          onChoose={(source) => {
+            setDialog(null)
+            void api.addCapture({ id: source.id, name: source.name }).then(onSelect)
+          }}
+        />
+      )}
       {items.length > 0 && (
         <div className="order-progress">
           <div className="progress-bar">
@@ -161,7 +179,7 @@ function ResetProgressButton({ disabled }: { disabled: boolean }) {
  * One "Add" button for files and folders. The Windows file dialog cannot pick
  * files and a folder in the same window, so the button opens a small menu.
  */
-function AddMenu(props: { onFiles: () => void; onFolder: () => void }) {
+function AddMenu(props: { onFiles: () => void; onFolder: () => void; onYoutube: () => void; onCapture: () => void }) {
   const [open, setOpen] = useState(false)
   const box = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -197,6 +215,14 @@ function AddMenu(props: { onFiles: () => void; onFolder: () => void }) {
           <button role="menuitem" onClick={() => choose(props.onFolder)}>
             <span>{strings.addMenuFolder}</span>
             <span className="dim">{strings.addFolderHint}</span>
+          </button>
+          <button role="menuitem" onClick={() => choose(props.onYoutube)}>
+            <span>{strings.addMenuYoutube}</span>
+            <span className="dim">{strings.addMenuYoutubeHint}</span>
+          </button>
+          <button role="menuitem" onClick={() => choose(props.onCapture)}>
+            <span>{strings.addMenuCapture}</span>
+            <span className="dim">{strings.addMenuCaptureHint}</span>
           </button>
         </div>
       )}
@@ -269,10 +295,10 @@ function OrderRow(props: {
         </span>
         <span className="row-meta mono">
           {item.type === 'folder' && <FolderMeta item={item} />}
-          {item.cache !== 'ready' && item.cache !== 'error' && strings.cacheStates(item)}
+          {item.cache !== 'ready' && item.cache !== 'error' && <CacheProgress item={item} />}
           {item.cache === 'error' && (
             <span className="text-live" title={item.cacheError}>
-              {strings.copyError}
+              {item.youtube && !item.path ? strings.downloadError : strings.copyError}
             </span>
           )}
           {item.cache === 'ready' && (item.type === 'video' || item.type === 'audio') && formatTime(item.duration)}
@@ -300,6 +326,19 @@ function OrderRow(props: {
       </div>
       {expanded && <FolderBox item={item} />}
     </>
+  )
+}
+
+/** Copy or download state of a row. A download shows a small bar, because it can take minutes. */
+function CacheProgress({ item }: { item: ServiceItem }) {
+  if (item.cache !== 'downloading') return <>{strings.cacheStates(item)}</>
+  return (
+    <span className="row-download" title={item.youtube?.url}>
+      <span className="row-download-bar">
+        <span style={{ width: `${Math.round((item.cacheProgress ?? 0) * 100)}%` }} />
+      </span>
+      {strings.cacheStates(item)}
+    </span>
   )
 }
 
@@ -344,6 +383,11 @@ export function TypeIcon({ type }: { type: IconKind }) {
       {type === 'text' ? (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
           <path d="M5 6V4h14v2M12 4v16M9 20h6" />
+        </svg>
+      ) : type === 'capture' ? (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <rect x="3" y="4" width="18" height="13" rx="1.5" />
+          <path d="M3 8h18M6 6h.01M8.5 6h.01M9 20h6M12 17v3" />
         </svg>
       ) : type === 'countdown' ? (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">

@@ -60,7 +60,7 @@ Requirements:
 ## 4. Data model (first version)
 
 ```ts
-type ItemType = 'video' | 'slides' | 'song' | 'bible' | 'image' | 'audio' | 'countdown' | 'folder';
+type ItemType = 'video' | 'slides' | 'song' | 'bible' | 'image' | 'audio' | 'countdown' | 'folder' | 'capture';
 
 interface Output {        // one physical screen
   id: string;
@@ -129,6 +129,8 @@ The Order tab is labeled "Playlist" in the app. This document and the code still
 - An item is marked done automatically when it ends (setting per item), or by
   the "Mark done" button.
 - Drop files or folders to add them. Default order is by file name (01, 02…).
+- The **Add** menu has: Files…, Folder…, **YouTube video…** and **Window
+  capture…** (section 13).
 
 **Folder items in the order (for example the hymnal, 613 files)**
 - The folder row opens in place.
@@ -381,6 +383,8 @@ See `docs/design/Preview-*.dc.html`.
 - **Image:** Fit / Fill (crop) / Blur sides; background; auto next after N s;
   rotate by EXIF.
 - **Slides (PDF from .pptx):** page view, page thumbnails, prev/next.
+- **Window capture:** the live window, "Change window…", and "Cut off edges"
+  (top, bottom, left, right, in % of the window). See section 13.
 
 ## 7. Stage screen (participant monitor)
 
@@ -516,3 +520,55 @@ app updates itself from there. No server of our own is needed.
   `GH_TOKEN` environment variable. The token is only on the developer
   computer, never in the app.
 - The `ship` skill (`.claude/skills/ship/`) does all the steps.
+
+## 13. Window capture and YouTube download
+
+Both are in the **Add** menu of the playlist.
+
+**Window capture** (item type `capture`)
+- Shows a window of another program on the screens, live: for example Brave,
+  when the preacher wants to show a web page, or a YouTube video that was not
+  downloaded. Brave blocks the ads itself.
+- "Window capture…" opens a list of the open windows with a small picture of
+  each. The windows of this app are not in the list.
+- Only the picture is taken. The sound plays from that program itself.
+- The window must stay open and not minimized (Windows stops drawing a
+  minimized window). It can be behind other windows.
+- "Cut off edges" hides parts of the window, for example the tabs and the
+  address bar of a browser. The part that stays fills the screen as much as it
+  can, centered. F11 in the browser (full screen) also hides them.
+- The window id changes when the program is opened again. Then the preview
+  says that the window was not found, and "Change window…" chooses it again.
+  The output screens show black in that case, never a message.
+- The window is not a file, so it is not copied to the media cache. This is the
+  only item type that depends on another program.
+- How: `desktopCapturer.getSources` in the main process lists the windows; the
+  screen pages show the window with `getUserMedia` (`chromeMediaSource:
+  'desktop'`). The app allows this video-only request only for its own pages.
+  Small copies in the Screens column use 8 pictures per second, the preview 15,
+  the output screens 30.
+
+**YouTube download** (a `video` or `audio` item with `ServiceItem.youtube`)
+- "YouTube video…" opens a dialog: paste the link, and the app looks it up
+  (title, channel, length, picture, sizes).
+- Choose "Video (MP4)" or "Sound only (MP3)". For video, choose the picture size
+  (144 to 4K, with the size of the file). The default is 1080 or the largest
+  size below it. Choose the folder: the Downloads folder the first time. The
+  app remembers the last choices (`Settings.youtube`).
+- "Download and add" adds the item to the playlist at once. The row shows the
+  download (a small bar and %), then "joining picture and sound…" or "making
+  MP3…", then the normal copy to the media cache. It can go live when it is
+  ready, like any other file.
+- If the download fails, the row says "download failed" (the reason is in the
+  preview and as a tooltip), and the preview has "Download again".
+- Removing the item stops its download; Undo starts it again. If the app closes
+  during a download, it continues the next time the service opens.
+- Videos are MP4. The app prefers H.264 at the chosen size, so older computers
+  play them smoothly; above 1080 YouTube has only VP9 or AV1.
+- Download only videos that the church may show.
+- How: `yt-dlp` (https://github.com/yt-dlp/yt-dlp). It is downloaded from its
+  GitHub releases the first time (about 23 MB) into `<user data>/tools`, and it
+  updates itself (`yt-dlp -U`) when it is older than a week, because YouTube
+  changes often. `ffmpeg` comes with the app (`ffmpeg-static`, unpacked from
+  app.asar). yt-dlp needs a JavaScript program for YouTube: the app itself runs
+  as Node.js for that (`ELECTRON_RUN_AS_NODE=1`, `--js-runtimes node:<app>`).
