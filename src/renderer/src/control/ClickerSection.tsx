@@ -51,6 +51,21 @@ export function ClickerSection() {
               {strings.clickerForget}
             </button>
           </div>
+          <div className="clicker-row">
+            <label className="switch">
+              <input
+                type="checkbox"
+                role="switch"
+                checked={status.paired.block}
+                disabled={!status.paired.enabled}
+                onChange={(e) => void api.setClickerBlock(e.target.checked)}
+              />
+              <span className="switch-track" />
+              {strings.clickerBlock}
+            </label>
+          </div>
+          <p className="help small">{strings.clickerBlockHelp}</p>
+          {status.paired.block && status.blockError && <p className="warn">{strings.clickerBlockError(status.blockError)}</p>}
           <p className="clicker-last">
             <span className="label-inline">{strings.clickerLastPress}</span>{' '}
             {last ? (

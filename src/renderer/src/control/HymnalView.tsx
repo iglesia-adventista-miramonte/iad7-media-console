@@ -9,6 +9,22 @@ const api = window.mediaConsole
 export const hymnAudioKinds: HymnAudio[] = ['sung', 'instrumental', 'none']
 
 const audioKey = 'hymnal.audio'
+const syncKey = 'hymnal.sync'
+
+/** 75 → "1:15". */
+function clock(seconds: number): string {
+  const s = Math.max(0, Math.round(seconds))
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+}
+
+/** The text under slide `i`: its start in the music and how long it stays. Null when the hymn has no slide times. */
+export function slideTimeText(times: number[], i: number): string | null {
+  if (times.length === 0) return null
+  const start = i === 0 ? 0 : times[i - 1]
+  if (start === undefined) return null
+  const end = times[i]
+  return strings.hymnSlideTime(clock(start), end === undefined ? null : Math.round(end - start))
+}
 
 /** Lower case, no accents: "Señor" → "senor". */
 function plain(text: string): string {
@@ -68,6 +84,14 @@ export function useHymnal() {
       return 'instrumental'
     }
   })
+  // The slides change by themselves unless the operator turned it off. Remembered on this computer.
+  const [sync, setSyncState] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(syncKey) !== 'off'
+    } catch {
+      return true
+    }
+  })
   const searchRef = useRef<HTMLInputElement>(null)
 
   const results = useMemo(() => searchHymns(hymns, query), [hymns, query])
@@ -93,8 +117,19 @@ export function useHymnal() {
     }
   }
 
+  /** Turn the slide times on or off: for the hymns added or shown from now on, and for the hymn that is live. */
+  const setSync = (on: boolean, liveItemId?: string) => {
+    setSyncState(on)
+    try {
+      localStorage.setItem(syncKey, on ? 'on' : 'off')
+    } catch {
+      // Not saved: the choice still works until the app closes.
+    }
+    if (liveItemId) void api.updateItem(liveItemId, { settings: { hymnSync: on } })
+  }
+
   const choice = (): HymnChoice | null =>
-    selected ? { number: selected.number, audio: playableAudio(selected, audio), track: track || undefined } : null
+    selected ? { number: selected.number, audio: playableAudio(selected, audio), track: track || undefined, sync } : null
 
   useEffect(() => {
     if (added === null) return
@@ -121,7 +156,7 @@ export function useHymnal() {
     searchRef.current?.select()
   }
 
-  return { state, hymns, query, search, results, selected, select, page, setPage, audio, setAudio, track, setTrack, added, addToOrder, showNow, searchRef, focusSearch }
+  return { state, hymns, query, search, results, selected, select, page, setPage, audio, setAudio, track, setTrack, sync, setSync, added, addToOrder, showNow, searchRef, focusSearch }
 }
 
 /** The hymn that is on a screen now (its slides are the content of a group), with the slide shown. */
@@ -182,7 +217,7 @@ export function HymnalSide({ state, hymnal }: { state: ServiceState; hymnal: Hym
             onClick={() => hymnal.select(h.number)}
             onDoubleClick={() => {
               hymnal.select(h.number)
-              void api.addHymnToOrder({ number: h.number, audio: playableAudio(h, hymnal.audio) })
+              void api.addHymnToOrder({ number: h.number, audio: playableAudio(h, hymnal.audio), sync: hymnal.sync })
             }}
           >
             <span className="mono folder-num">{h.number}</span>
@@ -196,8 +231,21 @@ export function HymnalSide({ state, hymnal }: { state: ServiceState; hymnal: Hym
   )
 }
 
-/** The hymnal folder: where it is, and the buttons to open it, change it or read it again. */
+/** The hymnal folder: where it is, the buttons to open it, change it or read it again, and the import from the old program. */
 function HymnalFolder({ state }: { state: HymnalState }) {
+  // The folder chosen with "Change folder…" is the old program: ask what to do with it.
+  const [askOld, setAskOld] = useState<string | null>(null)
+  const [notOld, setNotOld] = useState(false)
+  const change = () => {
+    setNotOld(false)
+    void api.pickHymnalFolder().then((r) => setAskOld(r?.oldProgram ?? null))
+  }
+  const importFrom = (source?: string) => {
+    setAskOld(null)
+    setNotOld(false)
+    void api.importHymnal(source).then((r) => setNotOld(r === 'not-old-program'))
+  }
+  const busy = !!state.importing
   return (
     <div className="hymnal-foot">
       <span className="label">
@@ -207,15 +255,48 @@ function HymnalFolder({ state }: { state: HymnalState }) {
         {/* The path is cut at the left, so the end of it (the folder name) shows. */}
         <bdi>{state.root}</bdi>
       </span>
+      {askOld ? (
+        <div className="hymnal-ask">
+          <span className="small">{strings.hymnalOldProgramAsk(state.importTarget)}</span>
+          <div className="button-row">
+            <button className="btn btn-small btn-primary" onClick={() => importFrom(askOld)}>
+              {strings.hymnalImportNow}
+            </button>
+            <button className="btn btn-small" onClick={() => (void api.useHymnalFolder(askOld), setAskOld(null))}>
+              {strings.hymnalUseAsIs}
+            </button>
+            <button className="btn btn-small btn-quiet" onClick={() => setAskOld(null)}>
+              {strings.hymnalCancel}
+            </button>
+          </div>
+        </div>
+      ) : (
+        state.oldProgram && !busy && <span className="warn small">{strings.hymnalIsOldProgram}</span>
+      )}
+      {state.importing && <span className="small hymnal-importing">{strings.hymnalImporting(state.importing.done, state.importing.total)}</span>}
+      {!busy && state.importResult && (
+        <span className={state.importResult.error ? 'warn small' : 'dim small'}>
+          {state.importResult.error ? strings.hymnalImportFailed(state.importResult.error) : strings.hymnalImportDone(state.importResult.copied, state.importResult.kept)}
+        </span>
+      )}
+      {notOld && <span className="warn small">{strings.hymnalNotOldProgram}</span>}
       <div className="button-row">
         <button className="btn btn-small" onClick={() => void api.openHymnalFolder()}>
           {strings.hymnalOpenFolder}
         </button>
-        <button className="btn btn-small" onClick={() => void api.pickHymnalFolder()}>
+        <button className="btn btn-small" disabled={busy} onClick={change}>
           {strings.hymnalChangeFolder}
         </button>
-        <button className="btn btn-small btn-quiet" title={strings.hymnalRescanHint} onClick={() => void api.rescanHymnal()}>
+        <button className="btn btn-small btn-quiet" title={strings.hymnalRescanHint} disabled={busy} onClick={() => void api.rescanHymnal()}>
           ↻ {strings.hymnalRescan}
+        </button>
+        <button
+          className="btn btn-small btn-quiet"
+          title={strings.hymnalImportHint}
+          disabled={busy}
+          onClick={() => importFrom(state.oldProgram ? state.root : undefined)}
+        >
+          {strings.hymnalImport}
         </button>
       </div>
     </div>
@@ -316,7 +397,14 @@ export function HymnalMain({ state, hymnal }: { state: ServiceState; hymnal: Hym
 
       <div className="hymn-options">
         <HymnMusicOptions hymn={hymn} audio={hymnal.audio} track={hymnal.track} onAudio={hymnal.setAudio} onTrack={hymnal.setTrack} />
-        {hymn.times.length === 0 && kind !== 'none' && <span className="dim small">{strings.hymnNoTimes}</span>}
+        {hymn.times.length > 0 ? (
+          <label className="check" title={strings.hymnSyncHint}>
+            <input type="checkbox" checked={hymnal.sync} onChange={(e) => hymnal.setSync(e.target.checked, live?.itemId)} />
+            {strings.hymnSync}
+          </label>
+        ) : (
+          kind !== 'none' && <span className="dim small">{strings.hymnNoTimes}</span>
+        )}
       </div>
 
       <div className="thumbs">
@@ -330,10 +418,21 @@ export function HymnalMain({ state, hymnal }: { state: ServiceState; hymnal: Hym
           >
             <img src={url} alt="" loading="lazy" />
             <span className="thumb-num mono">{i + 1}</span>
+            <SlideTime times={hymn.times} index={i} />
           </button>
         ))}
       </div>
       <span className="dim small">{strings.slidesHelp}</span>
     </section>
   )
+}
+
+/** Under a hymn slide: when it starts in the music, and how long it stays. */
+export function SlideTime({ times, index }: { times: number[]; index: number }) {
+  const text = slideTimeText(times, index)
+  return text ? (
+    <span className="thumb-time mono" title={strings.hymnSlideTimeHint}>
+      {text}
+    </span>
+  ) : null
 }

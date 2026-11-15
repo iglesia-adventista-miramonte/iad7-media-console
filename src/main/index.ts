@@ -35,6 +35,7 @@ import {
   allowOutputWindowsToClose,
   onOutputWindowLost,
   openOutputIds,
+  outputPageReady,
   outputsHidden,
   sendRender,
   setOutputsHidden,
@@ -515,7 +516,24 @@ function registerIpc(): void {
   ipcMain.handle('hymnal:pick', async () => {
     if (!controlWindow) return
     const result = await dialog.showOpenDialog(controlWindow, { properties: ['openDirectory'], defaultPath: hymnal.hymnalRoot() })
-    if (!result.canceled && result.filePaths[0]) hymnal.setHymnalFolder(result.filePaths[0])
+    const folder = result.canceled ? undefined : result.filePaths[0]
+    if (!folder) return null
+    // The old program itself: the control window asks if it should be imported instead.
+    if (hymnal.isOldProgramFolder(folder)) return { oldProgram: folder }
+    hymnal.setHymnalFolder(folder)
+    return null
+  })
+  ipcMain.handle('hymnal:use', (_e, folder: string) => hymnal.setHymnalFolder(folder))
+  ipcMain.handle('hymnal:import', async (_e, source?: string) => {
+    if (!source) {
+      if (!controlWindow) return null
+      const result = await dialog.showOpenDialog(controlWindow, { properties: ['openDirectory'] })
+      source = result.canceled ? undefined : result.filePaths[0]
+      if (!source) return null
+    }
+    if (!hymnal.isOldProgramFolder(source)) return 'not-old-program'
+    void hymnal.importOldProgram(source)
+    return null
   })
   ipcMain.handle('hymnal:open', async () => {
     await shell.openPath(hymnal.ensureHymnalFolder())
@@ -531,8 +549,10 @@ function registerIpc(): void {
   ipcMain.handle('clicker:cancelPairing', () => clicker.cancelPairing())
   ipcMain.handle('clicker:forget', () => clicker.forgetClicker())
   ipcMain.handle('clicker:setEnabled', (_e, enabled: boolean) => clicker.setClickerEnabled(enabled))
+  ipcMain.handle('clicker:setBlock', (_e, block: boolean) => clicker.setClickerBlock(block))
   ipcMain.handle('clicker:liveKeys', (_e, active: boolean) => {
     liveKeysActive = active
+    clicker.setLiveKeys(active)
   })
   ipcMain.handle('remote:get', () => remote.remoteStatus())
   ipcMain.handle('remote:update', (_e, change: Partial<RemoteSettings>) => remote.updateRemote(change))
@@ -540,6 +560,7 @@ function registerIpc(): void {
   ipcMain.handle('update:install', () => installUpdateNow())
 
   ipcMain.on('output:playback', (_e, info: PlaybackInfo & { ended: boolean }) => svc.reportPlayback(info))
+  ipcMain.on('output:ready', (e) => outputPageReady(e.sender))
 }
 
 /**
@@ -648,7 +669,8 @@ if (!app.requestSingleInstanceLock()) {
         remote.remoteStateChanged()
       },
       onItemEnded: svc.audioItemEnded,
-      onItemTime: svc.audioItemTime
+      onItemTime: svc.audioItemTime,
+      nextSlideIn: svc.hymnNextSlideIn
     })
     // Read the hymnal folder before the service opens: hymn items need their pictures.
     hymnal.connectHymnal(settings, () => {
@@ -700,6 +722,7 @@ if (!app.requestSingleInstanceLock()) {
     closePdfWindow()
     audio.closeAudioWindow()
     shared.stopShared()
+    clicker.stopClicker()
     remote.stopRemote()
     svc.flushSave()
   })

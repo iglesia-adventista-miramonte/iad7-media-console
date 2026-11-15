@@ -1,5 +1,9 @@
+import { fork, type ChildProcess } from 'node:child_process'
+import { join } from 'node:path'
 import type { BrowserWindow } from 'electron'
 import type { ClickerAction, ClickerStatus, Settings } from '../shared/types'
+import type { GuardConfig, GuardMessage } from './clickerGuard'
+import { clickerKeyActions as keyActions, deviceKey, vidPid } from './clickerKeys'
 import { saveSettings } from './settings'
 
 /**
@@ -10,7 +14,9 @@ import { saveSettings } from './settings'
  * "raw input": every key press, with the device it came from. The app pairs
  * one device (the clicker) and acts only on keys from that device, so the
  * keyboard keeps working as normal in other programs. Windows still gives
- * the key to the program in front too.
+ * the key to the program in front too, unless "Keep the clicker keys away
+ * from other programs" is on: then a small helper process (clickerGuard.ts)
+ * takes the clicker keys before that program gets them.
  */
 
 const WM_INPUT = 0x00ff
@@ -20,18 +26,6 @@ const RIM_TYPEKEYBOARD = 1
 const RIDEV_INPUTSINK = 0x100
 const RI_KEY_BREAK = 1
 const INVALID_HANDLE = 0xffffffffffffffffn
-
-/** The keys that presenter clickers send. Anything else from the clicker is ignored. */
-const keyActions: Record<number, ClickerAction> = {
-  0x22: 'next', // Page Down
-  0x27: 'next', // →
-  0x28: 'next', // ↓
-  0x21: 'previous', // Page Up
-  0x25: 'previous', // ←
-  0x26: 'previous', // ↑
-  0x42: 'black', // B
-  0xbe: 'black' // .
-}
 
 interface Hooks {
   onAction: (action: ClickerAction) => void
@@ -56,6 +50,13 @@ let lastPress: ClickerStatus['lastPress'] = null
 const devices = new Map<bigint, { key: string; name: string } | null>()
 /** Keys held down now, so a held key counts once. */
 const down = new Set<string>()
+/** The helper process that keeps the clicker keys away from other programs. */
+let guard: ChildProcess | null = null
+let guardError: string | null = null
+/** The control window, as text (the number is too big for a message). */
+let controlHwnd = ''
+/** The Service page is shown in the control window. */
+let liveKeys = false
 
 export function connectClicker(s: Settings, h: Hooks): void {
   settings = s
@@ -68,7 +69,8 @@ export function clickerStatus(): ClickerStatus {
     supported: !!win32,
     error,
     pairing,
-    paired: c ? { name: c.name, enabled: c.enabled } : null,
+    paired: c ? { name: c.name, enabled: c.enabled, block: !!c.block } : null,
+    blockError: guardError,
     lastPress
   }
 }
@@ -95,6 +97,65 @@ export function startClicker(window: BrowserWindow): void {
       console.error('Clicker: could not read a key press:', err)
     }
   })
+  const handle = window.getNativeWindowHandle()
+  controlHwnd = (handle.length >= 8 ? handle.readBigUInt64LE(0) : BigInt(handle.readUInt32LE(0))).toString()
+  syncGuard()
+}
+
+/** The app closes: stop the helper process. */
+export function stopClicker(): void {
+  stopGuard()
+}
+
+/** The control window shows the Service page (true) or another page (false). */
+export function setLiveKeys(active: boolean): void {
+  liveKeys = active
+  syncGuard()
+}
+
+/** Keep the clicker keys away from other programs, or not. */
+export function setClickerBlock(block: boolean): void {
+  if (!settings.clicker) return
+  settings.clicker.block = block
+  guardError = null
+  saveSettings(settings)
+  syncGuard()
+  changed()
+}
+
+/** Start, update or stop the helper process, to match the settings. */
+function syncGuard(): void {
+  const c = settings.clicker
+  if (!win32 || !controlHwnd || !c || !c.enabled || !c.block || guardError) return stopGuard()
+  if (!guard) startGuard()
+  const config: GuardConfig = { deviceKey: c.deviceKey, hwnd: controlHwnd, liveKeys }
+  guard?.send(config)
+}
+
+function startGuard(): void {
+  // The helper is this same program, run as plain Node (no window).
+  const child = fork(join(__dirname, 'clickerGuard.js'), [], {
+    env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+    stdio: ['ignore', 'inherit', 'inherit', 'ipc']
+  })
+  guard = child
+  const failed = (message: string): void => {
+    if (guard !== child) return
+    guard = null
+    guardError = message
+    changed()
+  }
+  child.on('message', (message: GuardMessage) => {
+    if (message.type === 'failed') failed(message.message)
+  })
+  child.on('error', (err) => failed(err.message))
+  child.on('exit', () => failed('The helper process stopped.'))
+}
+
+function stopGuard(): void {
+  const child = guard
+  guard = null
+  child?.kill()
 }
 
 export function startPairing(): void {
@@ -111,7 +172,9 @@ export function cancelPairing(): void {
 export function forgetClicker(): void {
   settings.clicker = undefined
   lastPress = null
+  guardError = null
   saveSettings(settings)
+  syncGuard()
   changed()
 }
 
@@ -119,6 +182,7 @@ export function setClickerEnabled(enabled: boolean): void {
   if (!settings.clicker) return
   settings.clicker.enabled = enabled
   saveSettings(settings)
+  syncGuard()
   changed()
 }
 
@@ -149,8 +213,10 @@ function onRawInput(hRawInput: bigint): void {
     // Only a next or previous key pairs, so typing a letter on the keyboard cannot pair it by mistake.
     if (action !== 'next' && action !== 'previous') return
     pairing = false
-    settings.clicker = { deviceKey: device.key, name: device.name, enabled: true }
+    // A clicker that is paired again keeps the "keep the keys away" choice.
+    settings.clicker = { deviceKey: device.key, name: device.name, enabled: true, block: settings.clicker?.block }
     saveSettings(settings)
+    syncGuard()
     lastPress = { action, at: Date.now() }
     changed()
     return
@@ -169,21 +235,6 @@ function deviceInfo(device: bigint): { key: string; name: string } | null {
   const info = path ? { key: deviceKey(path), name: deviceName(path) } : null
   devices.set(device, info)
   return info
-}
-
-/**
- * The maker and model of the device (USB VID and PID), for example 046d:c538.
- * They stay the same when the clicker is plugged into another USB port.
- */
-function deviceKey(path: string): string {
-  const ids = vidPid(path)
-  return ids ? `${ids.vid}:${ids.pid}`.toLowerCase() : path.toLowerCase()
-}
-
-function vidPid(path: string): { vid: string; pid: string } | null {
-  const vid = /VID[_&]([0-9A-F]+)/i.exec(path)?.[1]
-  const pid = /PID[_&]([0-9A-F]+)/i.exec(path)?.[1]
-  return vid && pid ? { vid: vid.toUpperCase(), pid: pid.toUpperCase() } : null
 }
 
 function deviceName(path: string): string {

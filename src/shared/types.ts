@@ -118,6 +118,14 @@ export interface HymnalState {
   /** The folder has a "Letra" folder with hymns. */
   found: boolean
   hymns: HymnInfo[]
+  /** The folder is the old "Himnario Adventista" program itself (better: import it). */
+  oldProgram: boolean
+  /** The folder an import copies to. */
+  importTarget: string
+  /** An import from the old program runs now: files done and total. */
+  importing: { done: number; total: number; target: string } | null
+  /** How the last import ended (until the folder is changed). */
+  importResult: { copied: number; kept: number; error: string | null } | null
 }
 
 /** A hymn in the order: which hymn, and which music plays with it. */
@@ -126,6 +134,8 @@ export interface HymnChoice {
   audio: HymnAudio
   /** Index in the list of music files of that kind (0 = the first). */
   track?: number
+  /** Only when a hymn item is made: false = the slides do not change by themselves (ItemSettings.hymnSync). */
+  sync?: boolean
 }
 
 /** How Bible verses go on the screens (SPEC 5.5). */
@@ -146,6 +156,8 @@ export interface ClickerSettings {
   name: string
   /** Off: the clicker works only when Media Console is in front. */
   enabled: boolean
+  /** On: the clicker keys do not reach the program in front (clickerGuard.ts). */
+  block?: boolean
 }
 
 export interface ClickerStatus {
@@ -154,7 +166,9 @@ export interface ClickerStatus {
   error: string | null
   /** Waiting for a button press on the clicker. */
   pairing: boolean
-  paired: { name: string; enabled: boolean } | null
+  paired: { name: string; enabled: boolean; block: boolean } | null
+  /** Why the clicker keys cannot be kept away from other programs, or null. */
+  blockError: string | null
   /** The last button pressed on the paired clicker, to test it. "other": a button the app does not use. */
   lastPress: { action: ClickerAction | 'other'; at: number } | null
 }
@@ -404,7 +418,16 @@ export interface AudioState {
   ducked: boolean
   position: { time: number; duration: number } | null
   /** An audio item from the order that plays now. */
-  item: { itemId: string; title: string; playing: boolean; time: number; duration: number; volume: number } | null
+  item: {
+    itemId: string
+    title: string
+    playing: boolean
+    time: number
+    duration: number
+    volume: number
+    /** A hymn whose slides change by themselves: seconds until the next slide, or null. */
+    nextSlideIn?: number | null
+  } | null
   /** Output level, 0..1 for left and right. */
   levels: { l: number; r: number }
 }
@@ -989,7 +1012,11 @@ export interface MediaConsoleApi {
   getHymnal(): Promise<HymnalState>
   onHymnalChanged(callback: (state: HymnalState) => void): () => void
   /** Show a folder dialog and read the hymnal from the chosen folder. */
-  pickHymnalFolder(): Promise<void>
+  pickHymnalFolder(): Promise<{ oldProgram: string } | null>
+  /** Read this folder as it is (also the folder of the old program). */
+  useHymnalFolder(path: string): Promise<void>
+  /** Copy the old program into the hymnal folder. No folder given: the app asks for it. Returns 'not-old-program' when the folder is not the old program. */
+  importHymnal(source?: string): Promise<'not-old-program' | null>
   /** Open the hymnal folder in the file explorer (the folder is made if it is missing). */
   openHymnalFolder(): Promise<void>
   /** Read the hymnal folder again (after files were copied into it). */
@@ -1034,6 +1061,8 @@ export interface MediaConsoleApi {
   cancelClickerPairing(): Promise<void>
   forgetClicker(): Promise<void>
   setClickerEnabled(enabled: boolean): Promise<void>
+  /** Keep the clicker keys away from the program in front, or not. */
+  setClickerBlock(block: boolean): Promise<void>
   /** The Service page is shown and handles the keys itself while the window is in front. */
   setLiveKeysActive(active: boolean): Promise<void>
 
@@ -1060,6 +1089,8 @@ export interface MediaConsoleApi {
 
   // Output windows
   onOutputRender(callback: (render: OutputRender) => void): () => void
+  /** The output page listens now: send it what it must show (a render sent before this was lost). */
+  outputReady(): void
   reportPlayback(info: PlaybackInfo & { ended: boolean }): void
 
   // Hidden PDF window

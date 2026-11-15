@@ -6,11 +6,26 @@ import { loadPage, preloadPath } from './pages'
  * Put a window on a screen and make it cover the full screen.
  * Rules for all screen windows: frameless, fullscreen, always on top,
  * pointer hidden (the page sets cursor: none).
+ *
+ * When the window already covers the screen, only "always on top" is set
+ * again. Fullscreen is not turned off and on, because:
+ * - On Windows, Electron marks a hidden window as visible (WS_VISIBLE) when
+ *   it leaves fullscreen, without really showing it. After that, the window
+ *   can stay black when it is shown: the page runs, but nothing reaches the
+ *   screen until the app restarts. This happened after "Hide screens".
+ * - Windows reports display changes often (for example when another program
+ *   goes fullscreen). Each change would turn fullscreen off and on again on
+ *   the live screens.
+ * Call this only for a window that is shown, or for a new window before it
+ * is shown for the first time (it is not fullscreen yet then).
  */
 export function coverScreen(win: BrowserWindow, s: ScreenInfo): void {
-  win.setFullScreen(false)
-  win.setBounds({ x: s.x, y: s.y, width: s.width, height: s.height })
   win.setAlwaysOnTop(true, 'screen-saver')
+  const b = win.getBounds()
+  const inPlace = b.x === s.x && b.y === s.y && b.width === s.width && b.height === s.height
+  if (inPlace && win.isFullScreen()) return
+  if (win.isFullScreen()) win.setFullScreen(false)
+  win.setBounds({ x: s.x, y: s.y, width: s.width, height: s.height })
   win.setFullScreen(true)
 }
 

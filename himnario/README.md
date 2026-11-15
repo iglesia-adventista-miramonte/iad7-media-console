@@ -48,5 +48,7 @@ folder, give it as a second path.
 
 - Dev copy (`npm run dev`): this folder.
 - Installed app: `Documents\Himnario`.
-- Or any folder: Hymnal tab › **Change folder…**. After you copy files into
+- Or any folder: Hymnal tab › **Change folder…**. The folder of the old
+  program ("Himnario NUEVA VERSION PC") works too: without `himnos.json`, the
+  titles and slide times come from its `Resources/index.html`. After you copy files into
   the folder, click **Read again**.

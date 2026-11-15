@@ -19,7 +19,18 @@ function copyPdfjsData(): Plugin {
 }
 
 export default defineConfig({
-  main: {},
+  main: {
+    build: {
+      rollupOptions: {
+        // Two programs: the app, and the small helper process that keeps the
+        // clicker keys away from other programs (src/main/clickerGuard.ts).
+        input: {
+          index: resolve(__dirname, 'src/main/index.ts'),
+          clickerGuard: resolve(__dirname, 'src/main/clickerGuard.ts')
+        }
+      }
+    }
+  },
   preload: {},
   renderer: {
     plugins: [react(), copyPdfjsData()],

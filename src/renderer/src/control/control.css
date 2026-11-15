@@ -2909,3 +2909,32 @@
 .stage-layout {
   margin: 6px 0;
 }
+
+/* Hymn slide: start in the music and length, at the bottom right of the thumbnail */
+.thumb-time {
+  position: absolute;
+  right: 4px;
+  bottom: 3px;
+  padding: 0 4px;
+  font-size: 10px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 3px;
+}
+/* Hymnal folder: the question when the old program folder is chosen */
+.hymnal-ask {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-panel);
+  border-radius: 6px;
+}
+.hymnal-importing {
+  color: var(--preview);
+}
+/* Live row: seconds until the next hymn slide */
+.next-slide-in {
+  color: var(--preview);
+  font-size: 12px;
+}

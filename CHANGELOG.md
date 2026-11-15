@@ -1,5 +1,17 @@
 # Changes
 
+## Not released yet
+
+- Hymnal: "Import from the old program…" copies the pictures, music and slide times of the old "Himnario Adventista" program into the hymnal folder. Run it again at any time to repair the folder; files already there are not copied again. When "Change folder…" picks the old program's folder, the app asks if it should import it.
+- Hymnal: when you change a slide by hand (arrow keys or clicker), the slides keep changing by themselves: that slide starts its own time, and the next slides follow after their own times. Before, they waited for the music to reach the next slide.
+- Hymnal: the switch "Slides change by themselves (slide times)" is also in the Hymnal tab. Turn it off to change every slide by hand.
+- Hymnal: each slide shows its start time in the music and how long it stays, and the live row shows the seconds until the next slide.
+- Fixed: when the Hymnal tab used the folder of the old "Himnario Adventista" program, the slides did not follow the music ("The slide times of this hymn are not known"). The app now reads the slide times from that program's own files.
+- Fixed: after "Hide screens" was turned off, an output screen could stay black (the test screen worked, but not the live content) until the app was restarted.
+- Fixed: when an output screen was connected again (for example a projector turned off and on), it could stay empty until the next change, such as the next slide.
+- The output screens no longer leave and enter fullscreen each time Windows reports a display change.
+- Presenter clicker: new switch "Keep the clicker keys away from other programs" on the Setup tab. When it is on, the program in front (for example Chrome or Zoom) does not get the clicker keys, so it does not scroll or type when you press Next or Previous. The same keys on the keyboard still work in that program. The switch is off by default. It is new: test it before a service, and turn it off if the clicker or the keyboard acts wrong. It does not work in programs that run as administrator.
+
 ## 2.0.1 – 2026-11-14
 
 - Updates now come from the church's GitHub: github.com/iglesia-adventista-miramonte/iad7-media-console. Computers with version 1.5.0 or older update to this version by themselves, like any other update; no installer is needed. After that they update from the new place.

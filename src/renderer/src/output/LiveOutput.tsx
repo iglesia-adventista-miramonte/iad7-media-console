@@ -8,7 +8,12 @@ const api = window.mediaConsole
 /** A real output window. It shows only what the main process sends. */
 export function LiveOutput() {
   const [render, setRender] = useState<OutputRender | null>(null)
-  useEffect(() => api.onOutputRender(setRender), [])
+  useEffect(() => {
+    const stop = api.onOutputRender(setRender)
+    // The main process may have sent the first render before this listener existed.
+    api.outputReady()
+    return stop
+  }, [])
 
   if (!render) return <div className="screen-view" />
   // Stage view groups show the stage layout (the sound of videos stays on the main screens).

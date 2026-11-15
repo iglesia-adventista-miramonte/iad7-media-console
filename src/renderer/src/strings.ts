@@ -285,16 +285,34 @@ export const strings = {
   hymnAudio: { sung: 'Sung', instrumental: 'Track only', none: 'No music' },
   hymnAudioMissing: 'no file',
   hymnTrack: 'Music file',
-  hymnSync: 'Slides follow the music',
+  hymnSync: 'Slides change by themselves (slide times)',
   hymnSyncHint:
-    'When the music reaches the start of a slide, the screens show that slide. You can still change the slide with the arrow keys. Double-click a slide: the music jumps to it.',
-  hymnNoTimes: 'The slide times of this hymn are not known (himnos.json): change the slides with the arrow keys.',
+    'On: each slide has its own time from the music. The slides change by themselves, following the music. If you change a slide with the arrow keys or the clicker, that slide starts its time again and the next slides follow from there (the music does not move). Double-click a slide: the music jumps to it. Off: change every slide by hand.',
+  hymnNoTimes: 'The slide times of this hymn are not known: change the slides with the arrow keys.',
+  /** Under a slide: when it starts in the music, and how long it stays. The last slide stays until the music ends. */
+  hymnSlideTime: (start: string, seconds: number | null) => (seconds === null ? `${start} → end` : `${start} · ${seconds} s`),
+  hymnSlideTimeHint: 'When this slide starts in the music, and how long it stays',
+  hymnNextSlideIn: (seconds: number) => `next slide in ${seconds} s`,
+  hymnNextSlideHint: 'The slide changes by itself in this many seconds (slide times). Arrow keys change it now.',
   hymnMusicNote: (kind: string) => `♪ ${kind}`,
   hymnalFolder: 'Hymnal folder',
   hymnalChangeFolder: 'Change folder…',
   hymnalOpenFolder: 'Open folder',
   hymnalRescan: 'Read again',
   hymnalRescanHint: 'Read the hymnal folder again, after files were copied into it',
+  hymnalImport: 'Import from the old program…',
+  hymnalImportHint:
+    'Choose the folder of the old "Himnario Adventista" program (Himnario NUEVA VERSION PC). Its pictures and music are copied into the hymnal folder, with the slide times. Run it again at any time to repair the hymnal folder: files that are already there are not copied again.',
+  hymnalOldProgramAsk: (target: string) =>
+    `This is the folder of the old "Himnario Adventista" program. Import it? Its pictures, music and slide times are copied into the hymnal folder (${target}), and the app reads that folder from then on.`,
+  hymnalImportNow: 'Import',
+  hymnalUseAsIs: 'Use this folder as it is',
+  hymnalCancel: 'Cancel',
+  hymnalIsOldProgram: 'This is the folder of the old program. Import it, so the hymnal has its own folder.',
+  hymnalNotOldProgram: 'That folder is not the old "Himnario Adventista" program (it has no Letra and Resources folders).',
+  hymnalImporting: (done: number, total: number) => (total ? `Importing hymns… ${done} of ${total} files` : 'Importing hymns…'),
+  hymnalImportDone: (copied: number, kept: number) => `Import done: ${copied} files copied, ${kept} were already there.`,
+  hymnalImportFailed: (message: string) => `The import stopped: ${message}`,
   hymnalEmpty:
     'No hymns in this folder yet. Copy the hymn files into it: Letra (one folder of pictures per hymn), Musica\\Cantado and Musica\\Instrumental (one music file per hymn). Then click "Read again". Or choose the folder where the files are.',
   bibleEmptyMain: 'Add a Bible version first (left column).',
@@ -591,6 +609,10 @@ export const strings = {
   clickerCancel: 'Cancel',
   clickerPressNow: 'Press the Next button on the clicker now…',
   clickerBackground: 'Works when another program is in front',
+  clickerBlock: 'Keep the clicker keys away from other programs (new, test it first)',
+  clickerBlockHelp:
+    'On: the program in front (for example Chrome or Zoom) does not get the clicker keys, so it does not scroll or type. The keys are the arrows, Page Up, Page Down, B and period. The same keys on the keyboard still go to that program. It does not work in programs that run as administrator. Try it before a service; if the clicker or the keyboard acts wrong, turn it off.',
+  clickerBlockError: (message: string) => `The clicker keys cannot be kept away from other programs on this computer: ${message} Turn the switch off and on to try again.`,
   clickerLastPress: 'Last button',
   clickerNoPress: 'Press a button on the clicker to test it.',
   clickerActions: { next: 'Next', previous: 'Previous', black: 'Black screen', other: 'A button the app does not use' } as Record<

@@ -5,7 +5,7 @@ import { ScreenView, type PlaybackReport } from '../view/ScreenView'
 import { useAudioDevices } from './AudioTab'
 import { BiblePreview, SongPreview } from './BiblePreview'
 import { useHymnalState } from './hooks'
-import { HymnMusicOptions, playableAudio } from './HymnalView'
+import { HymnMusicOptions, playableAudio, SlideTime } from './HymnalView'
 import { MediaButton } from './MediaIcons'
 
 const api = window.mediaConsole
@@ -560,6 +560,9 @@ function SlidesOptions(props: {
   const { item, page, livePage, onPage, set } = props
   const urls = item.pageUrls ?? []
   const s = item.settings
+  // A hymn shows the time of each slide under it.
+  const hymnal = useHymnalState()
+  const hymnTimes = item.hymn ? hymnal?.hymns.find((h) => h.number === item.hymn!.number)?.times : undefined
   return (
     <div className="slides-options">
       <div className="video-controls">
@@ -583,6 +586,7 @@ function SlidesOptions(props: {
           >
             <img src={url} alt="" loading="lazy" />
             <span className="thumb-num mono">{i + 1}</span>
+            {hymnTimes && <SlideTime times={hymnTimes} index={i} />}
           </button>
         ))}
       </div>

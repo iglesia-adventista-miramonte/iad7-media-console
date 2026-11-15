@@ -47,6 +47,8 @@ export function audioSettings(): AudioSettings {
   return settings?.audio ?? defaultAudioSettings()
 }
 
+let nextSlideIn: (itemId: string) => number | null = () => null
+
 export function connectAudio(
   s: Settings,
   options: {
@@ -55,10 +57,13 @@ export function connectAudio(
     onItemEnded: (itemId: string) => void
     /** The time of the audio item moved (the slides of a hymn follow it). */
     onItemTime?: (itemId: string, time: number) => void
+    /** Seconds until the next slide of the hymn that this audio item belongs to, or null. */
+    nextSlideIn?: (itemId: string) => number | null
   }
 ): void {
   settings = s
   settings.audio = { ...defaultAudioSettings(), ...settings.audio }
+  nextSlideIn = options.nextSlideIn ?? (() => null)
   videoPlaying = options.videoPlaying
   notify = options.onChange
   onItemEnded = options.onItemEnded
@@ -140,7 +145,15 @@ export function audioState(): AudioState {
     ducked,
     position,
     item: item
-      ? { itemId: item.itemId, title: item.title, playing: item.playing, time: item.time, duration: item.duration, volume: item.volume }
+      ? {
+          itemId: item.itemId,
+          title: item.title,
+          playing: item.playing,
+          time: item.time,
+          duration: item.duration,
+          volume: item.volume,
+          nextSlideIn: nextSlideIn(item.itemId)
+        }
       : null,
     levels: { l, r }
   }

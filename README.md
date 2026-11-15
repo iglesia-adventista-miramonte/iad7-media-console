@@ -35,6 +35,16 @@ the folder from the old "Himnario Adventista" program:
 npm run himnario -- "C:\path\to\Himnario NUEVA VERSION PC"
 ```
 
+Or do the same in the app: Hymnal tab › **Import from the old program…**, and
+choose the old program's folder. Run it again at any time to repair the hymnal
+folder. If **Change folder…** picks the old program's folder, the app asks if
+it should import it (or use it as it is).
+
+Each slide has its own time in the music. The slides change by themselves; if
+you change one with the arrow keys or the clicker, that slide starts its time
+again and the next ones follow from there. The live row shows the seconds until
+the next slide. Turn off **Slides change by themselves** to do it all by hand.
+
 This project continues the first
 [iad7-media-console](https://github.com/cesh13/iad7-media-console) by Cesar
 Molina (MIT license). It has all of its changes up to version 1.5.0, and adds
@@ -133,6 +143,13 @@ button on the clicker. Then the clicker changes slides and verses even when
 another program (for example Chrome) is in front. Only the clicker does this:
 the keyboard keeps working as normal. Windows still gives the key to the program
 in front too, so Chrome may scroll a little. Windows only.
+
+To stop that, turn on **Keep the clicker keys away from other programs** (off
+by default; it is new, so test it before a service). Then the program in front
+does not get the clicker keys (arrows, Page Up, Page Down, B, period). The same
+keys on the keyboard still go to that program. It does not work in programs
+that run as administrator. If the clicker or the keyboard acts wrong, turn it
+off: everything then works as before.
 
 To see every key Windows reports and the device it came from, start the app
 with `MEDIA_CONSOLE_CLICKER_LOG=1`.

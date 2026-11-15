@@ -120,6 +120,7 @@ const api: MediaConsoleApi = {
   cancelClickerPairing: () => invoke('clicker:cancelPairing'),
   forgetClicker: () => invoke('clicker:forget'),
   setClickerEnabled: (enabled) => invoke('clicker:setEnabled', enabled),
+  setClickerBlock: (block) => invoke('clicker:setBlock', block),
   setLiveKeysActive: (active) => invoke('clicker:liveKeys', active),
 
   // Updates
@@ -159,6 +160,8 @@ const api: MediaConsoleApi = {
   getHymnal: () => invoke('hymnal:get'),
   onHymnalChanged: (cb) => listen<HymnalState>('hymnal:changed', cb),
   pickHymnalFolder: () => invoke('hymnal:pick'),
+  useHymnalFolder: (path) => invoke('hymnal:use', path),
+  importHymnal: (source) => invoke('hymnal:import', source),
   openHymnalFolder: () => invoke('hymnal:open'),
   rescanHymnal: () => invoke('hymnal:rescan'),
   addHymnToOrder: (choice) => invoke('hymnal:add', choice),
@@ -185,6 +188,7 @@ const api: MediaConsoleApi = {
 
   // Output windows
   onOutputRender: (cb) => listen<OutputRender>('output:render', cb),
+  outputReady: () => ipcRenderer.send('output:ready'),
   reportPlayback: (info) => ipcRenderer.send('output:playback', info),
 
   // Hidden PDF window

@@ -428,9 +428,12 @@ function LiveContentRow({ state, content, groups }: { state: ServiceState; conte
         {item?.title ?? content.title}
       </span>
       {content.type === 'slides' && (
-        <span className="mono">
-          {(content.page ?? 0) + 1}/{content.pageUrls?.length ?? 1}
-        </span>
+        <>
+          <NextSlideIn itemId={content.itemId} />
+          <span className="mono">
+            {(content.page ?? 0) + 1}/{content.pageUrls?.length ?? 1}
+          </span>
+        </>
       )}
       {content.type === 'video' ? (
         <div className="video-controls live-video">
@@ -488,5 +491,17 @@ function LiveAudioRow({ state, item }: { state: ServiceState; item: NonNullable<
       </div>
       <StopButton title={strings.stopAudioHint} onClick={() => void api.stopItemAudio()} />
     </div>
+  )
+}
+
+/** A hymn whose slides change by themselves: the seconds until the next slide. */
+function NextSlideIn({ itemId }: { itemId: string }) {
+  const audio = useAudioState()
+  const seconds = audio?.item?.itemId === itemId ? audio.item.nextSlideIn : null
+  if (seconds === null || seconds === undefined) return null
+  return (
+    <span className="mono next-slide-in" title={strings.hymnNextSlideHint}>
+      {strings.hymnNextSlideIn(Math.ceil(seconds))}
+    </span>
   )
 }

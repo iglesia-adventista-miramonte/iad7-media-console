@@ -54,8 +54,13 @@ const autoNextTimers = new Map<number, NodeJS.Timeout>()
  * The audio layer: an audio item from the order that plays now (one for all groups).
  * `hymn`: the music of a hymn. It stops when the slides of the hymn leave the screens.
  * `syncPage`: the slide that the time of the music asked for last.
+ * `time`: the last time the music reported, in seconds.
+ * `offset`: seconds added to the music time to find the slide. It is 0 while
+ * the slides follow the music. When the operator changes the slide by hand,
+ * the offset makes that slide start now, and the next slides follow after
+ * their own times.
  */
-let audioLayer: { itemId: string; take: number; hymn?: boolean; syncPage?: number } | null = null
+let audioLayer: { itemId: string; take: number; hymn?: boolean; syncPage?: number; time?: number; offset?: number } | null = null
 let audioHooks: {
   playItem: (itemId: string, title: string, url: string, volume: number) => void
   stopItem: () => void
@@ -639,6 +644,7 @@ function stepTake(t: number, delta: number, atEnd: 'next' | 'idle' = 'next'): vo
   }
   page = Math.max(0, page)
   for (const id of groupIds) live.get(id)!.content!.page = page
+  if (item.hymn) hymnPageByHand(item, page)
   changed({ save: false })
 }
 
@@ -963,6 +969,7 @@ function newHymnItem(choice: HymnChoice): ServiceItem | null {
     settings: { ...defaultSettings('slides'), volume: 1 },
     hymn: { number: choice.number, audio: choice.audio, track: choice.track }
   }
+  if (choice.sync === false) item.settings.hymnSync = false
   applyHymn(item)
   return item
 }
@@ -982,6 +989,7 @@ export function showHymnNow(choice: HymnChoice): void {
   let item = extraItems.find((i) => i.hymn?.number === choice.number)
   if (item) {
     item.hymn = { number: choice.number, audio: choice.audio, track: choice.track }
+    item.settings.hymnSync = choice.sync === false ? false : undefined
     applyHymn(item)
   } else {
     item = newHymnItem(choice) ?? undefined
@@ -1032,7 +1040,7 @@ function startHymnAudio(item: ServiceItem, t: number, page: number): void {
   }
   if (!url) return
   audioHooks.stopMusic()
-  audioLayer = { itemId: item.id, take: t, hymn: true, syncPage: page }
+  audioLayer = { itemId: item.id, take: t, hymn: true, syncPage: page, time: slideTime(item, page), offset: 0 }
   audioHooks.playItem(item.id, item.title, url, item.settings.volume ?? 1)
   if (hymnSyncOn(item) && slideTime(item, page) > 0) audioHooks.seekItem(slideTime(item, page))
 }
@@ -1041,21 +1049,41 @@ function startHymnAudio(item: ServiceItem, t: number, page: number): void {
 function seekHymnTo(item: ServiceItem, page: number): void {
   if (!audioLayer || !hymnSyncOn(item)) return
   audioLayer.syncPage = page
+  audioLayer.time = slideTime(item, page)
+  audioLayer.offset = 0
   audioHooks.seekItem(slideTime(item, page))
+}
+
+/**
+ * The operator changed the slide of a live hymn by hand (arrow keys, clicker,
+ * remote). The music does not move. That slide starts its own time now, and
+ * the next slides follow after their own times, as if the music were at that
+ * slide. Pausing the music pauses the slides too.
+ */
+function hymnPageByHand(item: ServiceItem, page: number): void {
+  if (!audioLayer?.hymn || audioLayer.itemId !== item.id || !hymnSyncOn(item)) return
+  audioLayer.offset = slideTime(item, page) - (audioLayer.time ?? 0)
+  audioLayer.syncPage = page
 }
 
 /**
  * The time of the audio item moved. The slides of a hymn follow its music:
  * when the music passes the start time of a slide, the screens show that
- * slide. Between two start times the operator can still change the slide by hand.
+ * slide. After a change by hand, the slides follow the music time plus the
+ * offset (see hymnPageByHand).
  */
 export function audioItemTime(itemId: string, time: number): void {
   if (!audioLayer?.hymn || audioLayer.itemId !== itemId) return
+  // The music jumped (someone moved it in the music player): the slides follow the music again.
+  const last = audioLayer.time
+  if (last !== undefined && (time < last - 1 || time > last + 3)) audioLayer.offset = 0
+  audioLayer.time = time
   const item = findItem(itemId)
   if (!item?.hymn || !hymnSyncOn(item)) return
   const times = findHymn(item.hymn.number)?.times ?? []
+  const clock = time + (audioLayer.offset ?? 0)
   let page = 0
-  while (page < times.length && time >= times[page]) page++
+  while (page < times.length && clock >= times[page]) page++
   page = clampPage(item, page)
   if (page === audioLayer.syncPage) return
   audioLayer.syncPage = page
@@ -1066,6 +1094,19 @@ export function audioItemTime(itemId: string, time: number): void {
     any = true
   }
   if (any) changed({ save: false })
+}
+
+/**
+ * Seconds until the live hymn changes to its next slide by itself, or null
+ * (no slide times, slide times off, or the last slide).
+ */
+export function hymnNextSlideIn(itemId: string): number | null {
+  if (!audioLayer?.hymn || audioLayer.itemId !== itemId || audioLayer.time === undefined) return null
+  const item = findItem(itemId)
+  if (!item?.hymn || !hymnSyncOn(item)) return null
+  const clock = audioLayer.time + (audioLayer.offset ?? 0)
+  const next = (findHymn(item.hymn.number)?.times ?? []).find((t) => t > clock)
+  return next === undefined ? null : next - clock
 }
 
 // ---- Stage screen ----

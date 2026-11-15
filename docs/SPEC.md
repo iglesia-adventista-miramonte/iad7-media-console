@@ -266,6 +266,17 @@ The Order tab is labeled "Playlist" in the app. This document and the code still
   hymn is found by the number at the start of the name. Default folder:
   `himnario/` in the project (dev copy) or `Documents\Himnario` (installed
   app); "Change folder…" chooses another one. See `himnario/README.md`.
+- **Import from the old program.** "Import from the old program…" (Hymnal
+  folder area) asks for the folder of the old "Himnario Adventista" program
+  (it has `Letra` and `Resources\index.html`). It copies the pictures and the
+  music into the hymnal folder and writes `himnos.json` from the old program's
+  page, then the app reads the hymnal folder. Files already there with the same
+  size are not copied again, so the import can run again to repair the folder.
+  Progress and the result show under the folder path. If the hymnal folder is
+  the old program itself, the import goes to the default folder.
+- When "Change folder…" picks the old program's folder, the app asks: Import
+  (recommended), Use this folder as it is, or Cancel. Used as it is, the titles
+  and slide times come from its `Resources\index.html`.
 - The hymn files play from the hymnal folder itself, as `media://hymnal/…`.
   They are not copied to the media cache: the folder is on this computer and
   is about 3.8 GB.
@@ -277,10 +288,25 @@ The Order tab is labeled "Playlist" in the app. This document and the code still
   choice in the Hymnal tab is remembered on that computer. When it goes live the music starts on
   the audio layer and the background music fades out. The music stops when
   the slides of the hymn leave the screens.
-- **Slides follow the music** (on by default, when `himnos.json` has the
-  times): when the music passes the start time of a slide, the screens show
-  that slide. Between two start times the arrow keys still change the slide.
-  A double-click on a slide makes the music jump to the start of that slide.
+- **Slides change by themselves (slide times)** (on by default, when the
+  slide times are known): each slide has a start time in the music. When the
+  music passes the start time of a slide, the screens show that slide.
+  - A change by hand (arrow keys, clicker, remote) does not stop this: that
+    slide starts its own time at that moment, and the next slides follow after
+    their own times. The music does not move. (How: the main process adds an
+    offset to the music time; pausing the music pauses the slides too. If the
+    music jumps, for example someone moves it in the player, the offset is
+    cleared and the slides follow the music again.)
+  - A double-click on a slide makes the music jump to the start of that slide,
+    and the slides follow the music again.
+  - Off: every slide changes only by hand. The switch is in the hymn's preview
+    (playlist) and in the Hymnal tab. The Hymnal tab choice is remembered on
+    that computer, is used for hymns added or shown from there, and also
+    changes the hymn that is live.
+- Under each slide thumbnail: its start time in the music and how long it
+  stays (`0:48 · 39 s`; the last slide: `2:06 → end`).
+- The live row shows the seconds until the next slide (`next slide in 12 s`)
+  while the slides change by themselves.
 - A key press after the last slide of a hymn does nothing (the last slide
   stays). Esc Esc or the next item takes the hymn off.
 - Later: hymns as real text over a background that can be changed, so the
@@ -329,6 +355,11 @@ The Order tab is labeled "Playlist" in the app. This document and the code still
 - Keys from other devices (the keyboard) are never used in the background. Windows still gives the clicker key to the program in front too.
 - "Last button" shows the last press of the paired clicker, to test it. If a keyboard arrow also shows there, the keyboard and clicker share a receiver and cannot be told apart.
 - "Works when another program is in front" turns the background part off. "Forget" removes the pairing.
+- "Keep the clicker keys away from other programs" (off by default, saved with the pairing): the program in front does not get the keys of the paired clicker (→ ↓ Page Down, ← ↑ Page Up, B, .), so it does not scroll or type. The same keys from another keyboard still go to that program. It is on only while the app acts on the clicker in the background (not while the Service page is in front). It does not work in programs that run as administrator, because Windows does not ask the app about their keys.
+  - How: a small helper process (`src/main/clickerGuard.ts`, the app's own program run as plain Node) puts a low-level keyboard hook in Windows (SetWindowsHookEx, WH_KEYBOARD_LL) and listens to raw input too. The hook can take a key away but does not know its device; raw input knows the device. When raw input has already told the device, a clicker key is taken away and a keyboard key passes. When it has not, the key is held until raw input tells (at most 40 ms), then dropped or typed again with SendInput. Keys that come while a key is held are held too and typed again in the same order.
+  - The helper is a separate process so that Windows always gets a fast answer about each key, also when the main process is busy, and so that a failure in it cannot stop the app. It stops with the app.
+  - If Windows does not tell the device for 4 keys in a row, the helper stops and the Setup tab says so. Keys then work as with the switch off.
+  - MEDIA_CONSOLE_CLICKER_LOG=1 also prints what the helper does with each clicker key. MEDIA_CONSOLE_CLICKER_TEST=clicker, keyboard or silent makes the helper treat keys typed by a program as keys from the clicker, from a keyboard, or from a device that raw input never reports (for tests without a clicker).
 - How: Windows raw input (RegisterRawInputDevices with RIDEV_INPUTSINK on the control window), called through koffi. MEDIA_CONSOLE_CLICKER_LOG=1 prints every key with its device.
 
 ## 6. Preview by item type

@@ -1,4 +1,4 @@
-import type { BrowserWindow } from 'electron'
+import type { BrowserWindow, WebContents } from 'electron'
 import type { OutputRender, OutputStatus, ScreenInfo } from '../shared/types'
 import { coverScreen, createScreenWindow } from './screenWindow'
 
@@ -16,6 +16,8 @@ interface Entry {
   /** The screen the window covers (to cover it again after "Hide screens"). */
   screen: ScreenInfo
   allowClose: boolean
+  /** What the window shows now, to send again when its page starts listening. */
+  lastRender?: OutputRender
 }
 
 const windows = new Map<string, Entry>()
@@ -36,9 +38,13 @@ export function setOutputsHidden(value: boolean): void {
     if (hidden) {
       entry.win.hide()
     } else {
-      coverScreen(entry.win, entry.screen)
-      // Do not take the focus away from the control window.
+      // Show first, then put it on its screen (coverScreen must not change
+      // fullscreen while the window is hidden: see there). Do not take the
+      // focus away from the control window.
       entry.win.showInactive()
+      coverScreen(entry.win, entry.screen)
+      // Ask the page for a new picture, so the screen does not keep an old or empty one.
+      entry.win.webContents.invalidate()
     }
   }
 }
@@ -110,5 +116,20 @@ export function syncOutputWindows(statuses: OutputStatus[], onLoaded: (outputId:
 
 export function sendRender(outputId: string, render: OutputRender): void {
   const entry = windows.get(outputId)
-  if (entry && !entry.win.isDestroyed()) entry.win.webContents.send('output:render', render)
+  if (!entry) return
+  entry.lastRender = render
+  if (!entry.win.isDestroyed()) entry.win.webContents.send('output:render', render)
+}
+
+/**
+ * An output page says it listens now. Send it the last render again: a new
+ * window can get its first render before its page listens, and it then stayed
+ * empty until the next change (for example after a projector was connected
+ * again while one slide stayed on the screen).
+ */
+export function outputPageReady(sender: WebContents): void {
+  for (const entry of windows.values()) {
+    if (entry.win.isDestroyed() || entry.win.webContents !== sender) continue
+    if (entry.lastRender) sender.send('output:render', entry.lastRender)
+  }
 }
