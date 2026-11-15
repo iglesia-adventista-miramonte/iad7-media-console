@@ -6,7 +6,7 @@ import { useAudioDevices } from './AudioTab'
 import { BiblePreview, SongPreview } from './BiblePreview'
 import { CapturePreview } from './CaptureItem'
 import { useHymnalState } from './hooks'
-import { HymnMusicOptions, playableAudio, SlideTime } from './HymnalView'
+import { hymnKey, HymnMusicOptions, playableAudio, SlideTime } from './HymnalView'
 import { MediaButton } from './MediaIcons'
 
 const api = window.mediaConsole
@@ -230,7 +230,7 @@ function metaLine(item: ServiceItem): string {
 /** A hymn from the hymnal: which music plays with the slides, and if the slides follow it. */
 function HymnOptions({ item, set }: { item: ServiceItem; set: (s: Partial<ItemSettings>) => void }) {
   const hymnal = useHymnalState()
-  const hymn = hymnal?.hymns.find((h) => h.number === item.hymn?.number)
+  const hymn = item.hymn ? hymnal?.hymns.find((h) => hymnKey(h) === hymnKey(item.hymn!)) : undefined
   if (!hymn || !item.hymn) return null
   const hasMusic = playableAudio(hymn, item.hymn.audio) !== 'none'
   return (
@@ -253,7 +253,7 @@ function HymnOptions({ item, set }: { item: ServiceItem; set: (s: Partial<ItemSe
           {strings.hymnSync}
         </label>
       ) : (
-        hasMusic && <span className="dim small">{strings.hymnNoTimes}</span>
+        hasMusic && <span className="dim small">{hymn.book === 'antiguo' ? strings.hymnOldNoTimes : strings.hymnNoTimes}</span>
       )}
     </div>
   )
@@ -568,7 +568,7 @@ function SlidesOptions(props: {
   const s = item.settings
   // A hymn shows the time of each slide under it.
   const hymnal = useHymnalState()
-  const hymnTimes = item.hymn ? hymnal?.hymns.find((h) => h.number === item.hymn!.number)?.times : undefined
+  const hymnTimes = item.hymn ? hymnal?.hymns.find((h) => hymnKey(h) === hymnKey(item.hymn!))?.times : undefined
   return (
     <div className="slides-options">
       <div className="video-controls">

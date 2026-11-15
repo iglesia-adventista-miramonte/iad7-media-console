@@ -88,6 +88,8 @@ export interface Settings {
   remote?: RemoteSettings
   /** The hymnal folder (pictures and music). Not set: the default folder. */
   hymnalFolder?: string
+  /** The folder of the old hymnal (Himnario antiguo: PowerPoint and music per hymn). Not set: no old hymnal. */
+  hymnalOldFolder?: string
   /** The paired presenter clicker (SPEC 5.8). */
   clicker?: ClickerSettings
   /** The last choices in the YouTube dialog, so the next download starts with them. */
@@ -154,8 +156,16 @@ export interface CaptureSource {
 /** The music of a hymn: sung, track only, or no music (the people sing alone). */
 export type HymnAudio = 'sung' | 'instrumental' | 'none'
 
+/**
+ * Which hymnal a hymn is from: the new one (Himnario Adventista, pictures and
+ * music) or the old one (Himnario antiguo, PowerPoint and music). Numbers are
+ * the same in both, so a hymn is known by its book and its number.
+ */
+export type HymnBook = 'nuevo' | 'antiguo'
+
 /** One hymn in the hymnal folder. */
 export interface HymnInfo {
+  book: HymnBook
   number: number
   title: string
   /** One picture per slide (media:// URLs). */
@@ -166,6 +176,14 @@ export interface HymnInfo {
   instrumental: string[]
   /** Seconds in the music when slide 2, 3, … starts. Empty: not known. */
   times: number[]
+  /**
+   * Old hymnal only: the PowerPoint (or PDF) of the hymn. Its slides become
+   * pictures in the media cache the first time the hymn is used, so pageUrls
+   * is empty until then (pages: 'converting', then 'ready' or 'error').
+   */
+  presentation?: string
+  pages?: 'converting' | 'ready' | 'error'
+  pagesError?: string
 }
 
 /** Everything the Hymnal tab shows. */
@@ -175,6 +193,8 @@ export interface HymnalState {
   /** The folder has a "Letra" folder with hymns. */
   found: boolean
   hymns: HymnInfo[]
+  /** The old hymnal (Himnario antiguo): its folder (empty when none is chosen) and its number of hymns. */
+  old: { root: string; count: number }
   /** The folder is the old "Himnario Adventista" program itself (better: import it). */
   oldProgram: boolean
   /** The folder an import copies to. */
@@ -187,6 +207,8 @@ export interface HymnalState {
 
 /** A hymn in the order: which hymn, and which music plays with it. */
 export interface HymnChoice {
+  /** Not set: the new hymnal (hymn items saved before the old hymnal existed). */
+  book?: HymnBook
   number: number
   audio: HymnAudio
   /** Index in the list of music files of that kind (0 = the first). */
@@ -1104,6 +1126,12 @@ export interface MediaConsoleApi {
   onHymnalChanged(callback: (state: HymnalState) => void): () => void
   /** Show a folder dialog and read the hymnal from the chosen folder. */
   pickHymnalFolder(): Promise<{ oldProgram: string } | null>
+  /** Choose the folder of the old hymnal (Himnario antiguo). */
+  pickOldHymnalFolder(): Promise<void>
+  /** Open the folder of the old hymnal in Explorer. */
+  openOldHymnalFolder(): Promise<void>
+  /** Make the slide pictures of an old hymn (its PowerPoint), so the Hymnal tab can show them. */
+  prepareOldHymn(number: number): Promise<void>
   /** Read this folder as it is (also the folder of the old program). */
   useHymnalFolder(path: string): Promise<void>
   /** Copy the old program into the hymnal folder. No folder given: the app asks for it. Returns 'not-old-program' when the folder is not the old program. */

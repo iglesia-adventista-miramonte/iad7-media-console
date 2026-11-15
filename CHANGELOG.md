@@ -2,6 +2,7 @@
 
 ## Not released yet
 
+- Hymnal: the old hymnal (Himnario antiguo) can be added. Choose its folder in the Hymnal tab: one PowerPoint (or PDF) and the music of each hymn, by number. Three buttons under the search choose Nuevo (N), Antiguo (A) or both, and each hymn shows (N) or (A) after its title.
 - Hymnal: "Import from the old program…" copies the pictures, music and slide times of the old "Himnario Adventista" program into the hymnal folder. Run it again at any time to repair the folder; files already there are not copied again. When "Change folder…" picks the old program's folder, the app asks if it should import it.
 - Hymnal: when you change a slide by hand (arrow keys or clicker), the slides keep changing by themselves: that slide starts its own time, and the next slides follow after their own times. Before, they waited for the music to reach the next slide.
 - Hymnal: the switch "Slides change by themselves (slide times)" is also in the Hymnal tab. Turn it off to change every slide by hand.

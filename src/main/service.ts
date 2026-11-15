@@ -12,6 +12,7 @@ import type {
   GroupConfig,
   GroupLive,
   HymnAudio,
+  HymnBook,
   HymnChoice,
   ItemSettings,
   ItemStatus,
@@ -32,7 +33,7 @@ import { sortedParts } from '../shared/program'
 import { bibleDefaults, buildScreens, getChapter, listBibles } from './bible'
 import { mediaUrl } from './cache'
 import { refreshMedia } from './groups'
-import { findHymn, hymnAudioUrl } from './hymnal'
+import { findHymn, hymnAudioUrl, hymnalState, prepareOldHymn } from './hymnal'
 import { bibleOptions, shownStyle } from './textStyles'
 import { prepareFile } from './prepare'
 import { saveService } from './serviceStore'
@@ -1048,13 +1049,22 @@ export function goLiveCountdown(seconds: number, title: string): void {
 function applyHymn(item: ServiceItem): void {
   if (!item.hymn) return
   item.settings = { ...defaultSettings('slides'), volume: 1, ...item.settings }
-  const hymn = findHymn(item.hymn.number)
+  const hymn = findHymn(item.hymn.number, item.hymn.book)
   item.cacheProgress = undefined
   if (!hymn) {
     item.pageUrls = []
     item.url = undefined
     item.cache = 'error'
-    item.cacheError = `Hymn ${item.hymn.number} is not in the hymnal folder.`
+    item.cacheError = `Hymn ${item.hymn.number}${item.hymn.book === 'antiguo' ? ' (A)' : ''} is not in the hymnal folder.`
+    return
+  }
+  // An old hymn: its PowerPoint becomes pictures first (the hymnal tells when they are ready).
+  if (hymn.book === 'antiguo' && hymn.pages !== 'ready') {
+    if (hymn.pages === undefined) prepareOldHymn(hymn.number)
+    item.pageUrls = []
+    item.url = undefined
+    item.cache = hymn.pages === 'error' ? 'error' : 'converting'
+    item.cacheError = hymn.pagesError
     return
   }
   item.pageUrls = hymn.pageUrls
@@ -1064,17 +1074,17 @@ function applyHymn(item: ServiceItem): void {
 }
 
 function newHymnItem(choice: HymnChoice): ServiceItem | null {
-  const hymn = findHymn(choice.number)
+  const hymn = findHymn(choice.number, choice.book)
   if (!hymn) return null
   const item: ServiceItem = {
     id: randomUUID(),
     type: 'slides',
-    title: `${hymn.number} · ${hymn.title}`,
+    title: `${hymn.number} · ${hymn.title}${bookMark(hymn.book)}`,
     path: '',
     cache: 'ready',
     status: 'pending',
     settings: { ...defaultSettings('slides'), volume: 1 },
-    hymn: { number: choice.number, audio: choice.audio, track: choice.track }
+    hymn: { book: choice.book, number: choice.number, audio: choice.audio, track: choice.track }
   }
   if (choice.sync === false) item.settings.hymnSync = false
   applyHymn(item)
@@ -1093,9 +1103,9 @@ export function addHymn(choice: HymnChoice): string | null {
 
 /** "Show now" in the Hymnal tab: live on the target, not added to the order. */
 export function showHymnNow(choice: HymnChoice): void {
-  let item = extraItems.find((i) => i.hymn?.number === choice.number)
+  let item = extraItems.find((i) => i.hymn?.number === choice.number && (i.hymn.book ?? 'nuevo') === (choice.book ?? 'nuevo'))
   if (item) {
-    item.hymn = { number: choice.number, audio: choice.audio, track: choice.track }
+    item.hymn = { book: choice.book, number: choice.number, audio: choice.audio, track: choice.track }
     item.settings.hymnSync = choice.sync === false ? false : undefined
     applyHymn(item)
   } else {
@@ -1104,14 +1114,22 @@ export function showHymnNow(choice: HymnChoice): void {
     item.settings.autoDone = false
     extraItems.push(item)
   }
+  // An old hymn whose PowerPoint is still being made into pictures: the Hymnal tab shows that; try again then.
+  if (item.cache !== 'ready') return changed({ save: false })
   goLive(item.id)
+}
+
+/** " (A)" for the old hymnal; " (N)" for the new one when there is an old hymnal too. */
+function bookMark(book: HymnBook): string {
+  if (book === 'antiguo') return ' (A)'
+  return hymnalState().old.count > 0 ? ' (N)' : ''
 }
 
 /** Change the music of a hymn item. A hymn that is live gets the new music at the slide it shows. */
 export function setHymnAudio(itemId: string, audio: HymnAudio, track?: number): void {
   const item = findItem(itemId)
   if (!item?.hymn) return
-  item.hymn = { number: item.hymn.number, audio, track }
+  item.hymn = { book: item.hymn.book, number: item.hymn.number, audio, track }
   const content = [...live.values()].map((g) => g.content).find((c) => c?.itemId === itemId)
   if (content) {
     const before = liveItemIds()
@@ -1130,12 +1148,12 @@ export function hymnalChanged(): void {
 
 /** Seconds in the music when this slide starts (0 for the first slide, or when the times are not known). */
 function slideTime(item: ServiceItem, page: number): number {
-  const times = item.hymn ? (findHymn(item.hymn.number)?.times ?? []) : []
+  const times = item.hymn ? (findHymn(item.hymn.number, item.hymn.book)?.times ?? []) : []
   return page > 0 ? (times[page - 1] ?? 0) : 0
 }
 
 function hymnSyncOn(item: ServiceItem): boolean {
-  return item.settings.hymnSync !== false && (findHymn(item.hymn?.number ?? -1)?.times.length ?? 0) > 0
+  return item.settings.hymnSync !== false && (findHymn(item.hymn?.number ?? -1, item.hymn?.book)?.times.length ?? 0) > 0
 }
 
 /** Start the music of a hymn that just went live at `page`. A hymn with no music stops the music of the hymn before it. */
@@ -1187,7 +1205,7 @@ export function audioItemTime(itemId: string, time: number): void {
   audioLayer.time = time
   const item = findItem(itemId)
   if (!item?.hymn || !hymnSyncOn(item)) return
-  const times = findHymn(item.hymn.number)?.times ?? []
+  const times = findHymn(item.hymn.number, item.hymn.book)?.times ?? []
   const clock = time + (audioLayer.offset ?? 0)
   let page = 0
   while (page < times.length && clock >= times[page]) page++
@@ -1212,7 +1230,7 @@ export function hymnNextSlideIn(itemId: string): number | null {
   const item = findItem(itemId)
   if (!item?.hymn || !hymnSyncOn(item)) return null
   const clock = audioLayer.time + (audioLayer.offset ?? 0)
-  const next = (findHymn(item.hymn.number)?.times ?? []).find((t) => t > clock)
+  const next = (findHymn(item.hymn.number, item.hymn.book)?.times ?? []).find((t) => t > clock)
   return next === undefined ? null : next - clock
 }
 

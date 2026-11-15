@@ -2939,6 +2939,20 @@
   font-size: 12px;
 }
 
+/* Hymnal: which hymnal the search shows, and the (N) / (A) mark after a title */
+.hymn-scope {
+  flex-wrap: nowrap;
+}
+.hymn-book {
+  flex-shrink: 0;
+  margin: 0 6px;
+  font-size: 11px;
+  color: var(--text-2);
+}
+.hymn-book.is-old {
+  color: var(--warn);
+}
+
 /* ---- Window capture dialog ---- */
 .capture-dialog {
   width: min(860px, 94vw);

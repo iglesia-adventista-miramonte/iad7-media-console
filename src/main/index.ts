@@ -560,6 +560,15 @@ function registerIpc(): void {
     return null
   })
   ipcMain.handle('hymnal:use', (_e, folder: string) => hymnal.setHymnalFolder(folder))
+  ipcMain.handle('hymnal:pickOld', async () => {
+    if (!controlWindow) return
+    const result = await dialog.showOpenDialog(controlWindow, { properties: ['openDirectory'], defaultPath: hymnal.oldHymnalRoot() || undefined })
+    if (!result.canceled && result.filePaths[0]) hymnal.setOldHymnalFolder(result.filePaths[0])
+  })
+  ipcMain.handle('hymnal:openOld', async () => {
+    if (hymnal.oldHymnalRoot()) await shell.openPath(hymnal.oldHymnalRoot())
+  })
+  ipcMain.handle('hymnal:prepareOld', (_e, number: number) => hymnal.prepareOldHymn(number))
   ipcMain.handle('hymnal:import', async (_e, source?: string) => {
     if (!source) {
       if (!controlWindow) return null
