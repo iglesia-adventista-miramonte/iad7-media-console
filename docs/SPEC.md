@@ -309,6 +309,26 @@ The Order tab is labeled "Playlist" in the app. This document and the code still
   while the slides change by themselves.
 - A key press after the last slide of a hymn does nothing (the last slide
   stays). Esc Esc or the next item takes the hymn off.
+- **Old hymnal (Himnario antiguo).** A second folder, chosen in the Hymnal tab
+  ("Old hymnal (Antiguo)" › Choose folder…; `Settings.hymnalOldFolder`). It is
+  not imported: the app reads it as it is. Every PowerPoint (`.pptx`, `.ppt`,
+  `.ppsx`, `.pps`, `.odp`) or PDF whose name starts with a number is a hymn;
+  music files with the same number are its music. Subfolders are read (4
+  levels). Music in a folder whose name has "cant", "voz", "vocal" or "sung"
+  is Sung; all other music is Track only.
+  - Numbers are the same in both hymnals, so a hymn is known by book and number
+    (`HymnInfo.book`, `HymnChoice.book`; no book = the new hymnal).
+  - The PowerPoint becomes pictures in the media cache (PowerPoint or
+    LibreOffice, like any PowerPoint in the playlist) the first time the hymn
+    is chosen in the Hymnal tab or added. Until then the tab says "Making the
+    slides from the PowerPoint…" and Show now waits.
+  - The old hymnal has no slide times: its slides change by hand.
+  - Its music plays from its folder, as `media://hymnal-old/…`.
+- **Nuevo / Antiguo / Both.** When there is an old hymnal, three buttons under
+  the search choose which hymnal the search shows (only one is on; the choice
+  is remembered on that computer). Each hymn in the list has (N) or (A) after
+  its title. A number search shows that number from both hymnals first.
+  Playlist titles get " (A)" or " (N)" too.
 - Later: hymns as real text over a background that can be changed, so the
   pictures are not needed. The song text layer (section 6, Song) is the base
   for that.

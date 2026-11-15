@@ -289,6 +289,7 @@ export const strings = {
   hymnSyncHint:
     'On: each slide has its own time from the music. The slides change by themselves, following the music. If you change a slide with the arrow keys or the clicker, that slide starts its time again and the next slides follow from there (the music does not move). Double-click a slide: the music jumps to it. Off: change every slide by hand.',
   hymnNoTimes: 'The slide times of this hymn are not known: change the slides with the arrow keys.',
+  hymnOldNoTimes: 'The old hymnal has no slide times: change the slides with the arrow keys.',
   /** Under a slide: when it starts in the music, and how long it stays. The last slide stays until the music ends. */
   hymnSlideTime: (start: string, seconds: number | null) => (seconds === null ? `${start} → end` : `${start} · ${seconds} s`),
   hymnSlideTimeHint: 'When this slide starts in the music, and how long it stays',
@@ -300,6 +301,17 @@ export const strings = {
   hymnalOpenFolder: 'Open folder',
   hymnalRescan: 'Read again',
   hymnalRescanHint: 'Read the hymnal folder again, after files were copied into it',
+  hymnBookMark: { nuevo: '(N)', antiguo: '(A)' } as Record<'nuevo' | 'antiguo', string>,
+  /** Which hymnal the search shows. Only one is chosen. */
+  hymnScope: { nuevo: 'Nuevo (N)', antiguo: 'Antiguo (A)', both: 'Both' } as Record<'nuevo' | 'antiguo' | 'both', string>,
+  hymnScopeHint: 'Search in the new hymnal (N), the old hymnal (A), or both',
+  hymnOldConverting: 'Making the slides from the PowerPoint… (only the first time)',
+  hymnOldError: (message: string) => `The slides could not be made from the PowerPoint: ${message}`,
+  hymnalOldFolder: 'Old hymnal (Antiguo)',
+  hymnalOldNone: 'No folder chosen. Choose the folder with the PowerPoint and the music of each hymn.',
+  hymnalOldChoose: 'Choose folder…',
+  hymnalOldHint:
+    'The folder of the old hymnal: one PowerPoint (or PDF) per hymn, and its music, with the hymn number at the start of each file name. Subfolders are read too. Music in a folder whose name has "Cantado" or "Voz" is sung; other music is track only.',
   hymnalImport: 'Import from the old program…',
   hymnalImportHint:
     'Choose the folder of the old "Himnario Adventista" program (Himnario NUEVA VERSION PC). Its pictures and music are copied into the hymnal folder, with the slide times. Run it again at any time to repair the hymnal folder: files that are already there are not copied again.',

@@ -45,6 +45,24 @@ you change one with the arrow keys or the clicker, that slide starts its time
 again and the next ones follow from there. The live row shows the seconds until
 the next slide. Turn off **Slides change by themselves** to do it all by hand.
 
+### Old hymnal (Himnario antiguo)
+
+In the Hymnal tab, under **Old hymnal (Antiguo)**, click **Choose folder…** and
+choose the folder of the old hymnal. It needs one PowerPoint (or PDF) per hymn
+and its music, with the hymn number at the start of each file name, for example:
+
+```
+Himnario antiguo\
+  015 - Titulo del himno.pptx
+  Pistas\015 - Titulo del himno.mp3      track only
+  Cantado\015 - Titulo del himno.mp3     sung ("Cantado" or "Voz" in the folder name)
+```
+
+Then three buttons under the search choose **Nuevo (N)**, **Antiguo (A)** or
+**Both**, and every hymn shows (N) or (A) after its title. The first time an old
+hymn is used, its PowerPoint is made into pictures (a few seconds). The old
+hymnal has no slide times: change its slides with the arrow keys.
+
 This project continues the first
 [iad7-media-console](https://github.com/cesh13/iad7-media-console) by Cesar
 Molina (MIT license). It has all of its changes up to version 1.5.0, and adds

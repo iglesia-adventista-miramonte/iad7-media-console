@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
-import type { HymnAudio, HymnChoice, HymnInfo, HymnalState, ServiceState } from '../../../shared/types'
+import type { HymnAudio, HymnBook, HymnChoice, HymnInfo, HymnalState, ServiceState } from '../../../shared/types'
 import { strings } from '../strings'
 import { useHymnalState } from './hooks'
 import { TargetSelect } from './PreviewPanel'
@@ -10,6 +10,21 @@ export const hymnAudioKinds: HymnAudio[] = ['sung', 'instrumental', 'none']
 
 const audioKey = 'hymnal.audio'
 const syncKey = 'hymnal.sync'
+const scopeKey = 'hymnal.scope'
+
+/** Which hymnal the search shows. */
+export type HymnScope = HymnBook | 'both'
+const scopes: HymnScope[] = ['nuevo', 'antiguo', 'both']
+
+/** A hymn is known by its book and its number: "antiguo:100". */
+export function hymnKey(h: { book?: HymnBook; number: number }): string {
+  return `${h.book ?? 'nuevo'}:${h.number}`
+}
+
+/** " (A)" / " (N)" after a title, only when there is an old hymnal. */
+export function bookMark(state: HymnalState | null, book: HymnBook): string {
+  return state && state.old.count > 0 ? ` ${strings.hymnBookMark[book]}` : ''
+}
 
 /** 75 → "1:15". */
 function clock(seconds: number): string {
@@ -44,6 +59,7 @@ export function searchHymns(hymns: HymnInfo[], query: string): HymnInfo[] {
   if (/^\d+$/.test(q)) {
     const n = Number(q)
     const starts = hymns.filter((h) => h.number !== n && String(h.number).startsWith(String(n)))
+    // The same number can be in both hymnals: both come first (the new one, then the old one).
     return [...hymns.filter((h) => h.number === n), ...starts]
   }
   const words = q.split(/\s+/)
@@ -71,10 +87,19 @@ export function useHymnal() {
   const state = useHymnalState()
   const hymns = state?.hymns ?? []
   const [query, setQuery] = useState('')
-  const [number, setNumber] = useState<number | null>(null)
+  const [key, setKey] = useState<string | null>(null)
+  // Nuevo, Antiguo or both. Remembered on this computer.
+  const [scope, setScopeState] = useState<HymnScope>(() => {
+    try {
+      const saved = localStorage.getItem(scopeKey) as HymnScope | null
+      return saved && scopes.includes(saved) ? saved : 'both'
+    } catch {
+      return 'both'
+    }
+  })
   const [page, setPage] = useState(0)
   const [track, setTrack] = useState(0)
-  const [added, setAdded] = useState<number | null>(null)
+  const [added, setAdded] = useState<string | null>(null)
   // Track only is the default (the people sing). A different choice is remembered on this computer.
   const [audio, setAudioState] = useState<HymnAudio>(() => {
     try {
@@ -94,18 +119,33 @@ export function useHymnal() {
   })
   const searchRef = useRef<HTMLInputElement>(null)
 
-  const results = useMemo(() => searchHymns(hymns, query), [hymns, query])
-  const selected = hymns.find((h) => h.number === number) ?? null
+  // Without an old hymnal, the scope does not matter: all hymns are new ones.
+  const hasOld = (state?.old.count ?? 0) > 0
+  const inScope = useMemo(() => (!hasOld || scope === 'both' ? hymns : hymns.filter((h) => h.book === scope)), [hymns, scope, hasOld])
+  const results = useMemo(() => searchHymns(inScope, query), [inScope, query])
+  const selected = hymns.find((h) => hymnKey(h) === key) ?? null
 
-  const select = (n: number | null) => {
-    setNumber(n)
+  const select = (k: string | null) => {
+    setKey(k)
     setPage(0)
     setTrack(0)
+  }
+  const setScope = (sc: HymnScope) => {
+    setScopeState(sc)
+    try {
+      localStorage.setItem(scopeKey, sc)
+    } catch {
+      // Not saved: the choice still works until the app closes.
+    }
+    // The first result of the new scope is selected, like after typing.
+    const list = searchHymns(sc === 'both' ? hymns : hymns.filter((h) => h.book === sc), query)
+    if (query.trim() || (selected && sc !== 'both' && selected.book !== sc)) select(list[0] ? hymnKey(list[0]) : null)
   }
   const search = (text: string) => {
     setQuery(text)
     // The first result is selected, so Enter acts on it at once.
-    select(text.trim() ? (searchHymns(hymns, text)[0]?.number ?? null) : number)
+    const first = searchHymns(inScope, text)[0]
+    select(text.trim() ? (first ? hymnKey(first) : null) : key)
   }
   const setAudio = (a: HymnAudio) => {
     setAudioState(a)
@@ -129,7 +169,7 @@ export function useHymnal() {
   }
 
   const choice = (): HymnChoice | null =>
-    selected ? { number: selected.number, audio: playableAudio(selected, audio), track: track || undefined, sync } : null
+    selected ? { book: selected.book, number: selected.number, audio: playableAudio(selected, audio), track: track || undefined, sync } : null
 
   useEffect(() => {
     if (added === null) return
@@ -140,7 +180,7 @@ export function useHymnal() {
   const addToOrder = () => {
     const c = choice()
     if (!c) return
-    void api.addHymnToOrder(c).then((id) => id && setAdded(c.number))
+    void api.addHymnToOrder(c).then((id) => id && setAdded(hymnKey(c)))
   }
   const showNow = () => {
     const c = choice()
@@ -156,7 +196,12 @@ export function useHymnal() {
     searchRef.current?.select()
   }
 
-  return { state, hymns, query, search, results, selected, select, page, setPage, audio, setAudio, track, setTrack, sync, setSync, added, addToOrder, showNow, searchRef, focusSearch }
+  // An old hymn: make its slides from the PowerPoint when it is chosen, so they show here.
+  useEffect(() => {
+    if (selected?.book === 'antiguo' && selected.pages === undefined) void api.prepareOldHymn(selected.number)
+  }, [selected?.book, selected?.number, selected?.pages])
+
+  return { state, hymns, hasOld, scope, setScope, query, search, results, selected, select, page, setPage, audio, setAudio, track, setTrack, sync, setSync, added, addToOrder, showNow, searchRef, focusSearch }
 }
 
 /** The hymn that is on a screen now (its slides are the content of a group), with the slide shown. */
@@ -164,7 +209,7 @@ function liveHymn(state: ServiceState, hymns: HymnInfo[]): { hymn: HymnInfo; ite
   for (const g of state.groups) {
     const c = g.live.content
     const first = c?.type === 'slides' ? c.pageUrls?.[0] : undefined
-    const hymn = first ? hymns.find((h) => h.pageUrls[0] === first) : undefined
+    const hymn = first ? hymns.find((h) => h.pageUrls.length > 0 && h.pageUrls[0] === first) : undefined
     if (c && hymn) return { hymn, itemId: c.itemId, page: c.page ?? 0 }
   }
   return null
@@ -179,14 +224,14 @@ export function HymnalSide({ state, hymnal }: { state: ServiceState; hymnal: Hym
   // Keep the selected row visible.
   useEffect(() => {
     listRef.current?.querySelector<HTMLElement>('.folder-entry.is-cursor')?.scrollIntoView({ block: 'nearest' })
-  }, [selected?.number])
+  }, [selected?.book, selected?.number])
 
   const onKey = (e: KeyboardEvent) => {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault()
-      const index = results.findIndex((h) => h.number === selected?.number)
+      const index = results.findIndex((h) => selected && hymnKey(h) === hymnKey(selected))
       const next = results[Math.max(0, Math.min(results.length - 1, index + (e.key === 'ArrowDown' ? 1 : -1)))]
-      if (next) hymnal.select(next.number)
+      if (next) hymnal.select(hymnKey(next))
     } else if (e.key === 'Enter') {
       e.preventDefault()
       if (e.ctrlKey || e.metaKey) hymnal.showNow()
@@ -207,26 +252,41 @@ export function HymnalSide({ state, hymnal }: { state: ServiceState; hymnal: Hym
         onChange={(e) => hymnal.search(e.target.value)}
         onKeyDown={onKey}
       />
+      {hymnal.hasOld && (
+        <div className="chips hymn-scope" role="radiogroup" title={strings.hymnScopeHint}>
+          {scopes.map((sc) => (
+            <button key={sc} role="radio" aria-checked={hymnal.scope === sc} className={hymnal.scope === sc ? 'chip is-on' : 'chip'} onClick={() => hymnal.setScope(sc)}>
+              {strings.hymnScope[sc]}
+            </button>
+          ))}
+        </div>
+      )}
       <span className="dim small">{strings.hymnSearchHelp}</span>
       <div className="hymn-list" ref={listRef} data-own-keys>
         {results.length === 0 && <div className="dim small folder-empty">{hymnal.state?.found ? strings.hymnNoResults : strings.hymnalEmpty}</div>}
-        {results.map((h) => (
-          <div
-            key={h.number}
-            className={['folder-entry', h.number === selected?.number ? 'is-cursor' : '', h.number === live?.hymn.number ? 'is-live' : ''].join(' ')}
-            onClick={() => hymnal.select(h.number)}
-            onDoubleClick={() => {
-              hymnal.select(h.number)
-              void api.addHymnToOrder({ number: h.number, audio: playableAudio(h, hymnal.audio), sync: hymnal.sync })
-            }}
-          >
-            <span className="mono folder-num">{h.number}</span>
-            <span className="folder-title">{h.title}</span>
-            {h.number === live?.hymn.number ? <span className="tag tag-live">{strings.badgeLive}</span> : <span className="dim small">{h.pageUrls.length}</span>}
-          </div>
-        ))}
+        {results.map((h) => {
+          const k = hymnKey(h)
+          const isLive = !!live && hymnKey(live.hymn) === k
+          return (
+            <div
+              key={k}
+              className={['folder-entry', selected && hymnKey(selected) === k ? 'is-cursor' : '', isLive ? 'is-live' : ''].join(' ')}
+              onClick={() => hymnal.select(k)}
+              onDoubleClick={() => {
+                hymnal.select(k)
+                void api.addHymnToOrder({ book: h.book, number: h.number, audio: playableAudio(h, hymnal.audio), sync: hymnal.sync })
+              }}
+            >
+              <span className="mono folder-num">{h.number}</span>
+              <span className="folder-title">{h.title}</span>
+              {hymnal.hasOld && <span className={h.book === 'antiguo' ? 'hymn-book is-old' : 'hymn-book'}>{strings.hymnBookMark[h.book]}</span>}
+              {isLive ? <span className="tag tag-live">{strings.badgeLive}</span> : <span className="dim small">{h.pageUrls.length || ''}</span>}
+            </div>
+          )
+        })}
       </div>
       {hymnal.state && <HymnalFolder state={hymnal.state} />}
+      {hymnal.state && <OldHymnalFolder state={hymnal.state} />}
     </div>
   )
 }
@@ -303,6 +363,35 @@ function HymnalFolder({ state }: { state: HymnalState }) {
   )
 }
 
+/** The folder of the old hymnal (Himnario antiguo): where it is, and the buttons to choose it or open it. */
+function OldHymnalFolder({ state }: { state: HymnalState }) {
+  return (
+    <div className="hymnal-foot" title={strings.hymnalOldHint}>
+      <span className="label">
+        {strings.hymnalOldFolder}
+        {state.old.root ? ` · ${strings.hymnCount(state.old.count)}` : ''}
+      </span>
+      {state.old.root ? (
+        <span className="dim small mono hymnal-path" title={state.old.root}>
+          <bdi>{state.old.root}</bdi>
+        </span>
+      ) : (
+        <span className="dim small">{strings.hymnalOldNone}</span>
+      )}
+      <div className="button-row">
+        {state.old.root && (
+          <button className="btn btn-small" onClick={() => void api.openOldHymnalFolder()}>
+            {strings.hymnalOpenFolder}
+          </button>
+        )}
+        <button className="btn btn-small" onClick={() => void api.pickOldHymnalFolder()}>
+          {state.old.root ? strings.hymnalChangeFolder : strings.hymnalOldChoose}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 /** The music of a hymn: sung, track only or none; and which file, when the hymn has more than one. */
 export function HymnMusicOptions(props: {
   hymn: HymnInfo
@@ -365,8 +454,10 @@ export function HymnalMain({ state, hymnal }: { state: ServiceState; hymnal: Hym
       </section>
     )
 
-  const isLive = live?.hymn.number === hymn.number
-  const page = Math.min(hymnal.page, hymn.pageUrls.length - 1)
+  const isLive = !!live && hymnKey(live.hymn) === hymnKey(hymn)
+  // An old hymn: its slides are made from the PowerPoint first.
+  const waiting = hymn.book === 'antiguo' && hymn.pages !== 'ready'
+  const page = Math.max(0, Math.min(hymnal.page, hymn.pageUrls.length - 1))
   const kind = playableAudio(hymn, hymnal.audio)
 
   return (
@@ -376,6 +467,7 @@ export function HymnalMain({ state, hymnal }: { state: ServiceState; hymnal: Hym
         <div className="preview-title">
           <span className="selected-title">
             {hymn.number} · {hymn.title}
+            {bookMark(hymnal.state, hymn.book)}
           </span>
           <span className="dim mono">
             {strings.slideCount(hymn.pageUrls.length)} · {strings.hymnMusicNote(strings.hymnAudio[kind])}
@@ -383,16 +475,22 @@ export function HymnalMain({ state, hymnal }: { state: ServiceState; hymnal: Hym
         </div>
         <TargetSelect state={state} />
         <button className="btn btn-primary" onClick={hymnal.addToOrder}>
-          {hymnal.added === hymn.number ? '✓ ' : '+ '}
+          {hymnal.added === hymnKey(hymn) ? '✓ ' : '+ '}
           {strings.addToOrder}
         </button>
-        <button className="btn btn-live" onClick={hymnal.showNow}>
+        <button className="btn btn-live" disabled={waiting} onClick={hymnal.showNow}>
           {strings.showNow}
         </button>
       </div>
 
-      <div className="preview-box">
-        <img className="hymn-page" src={hymn.pageUrls[page]} alt="" />
+      <div className={waiting ? 'preview-box preview-empty' : 'preview-box'}>
+        {waiting ? (
+          <span className={hymn.pages === 'error' ? 'warn' : 'dim'}>
+            {hymn.pages === 'error' ? strings.hymnOldError(hymn.pagesError ?? '') : strings.hymnOldConverting}
+          </span>
+        ) : (
+          <img className="hymn-page" src={hymn.pageUrls[page]} alt="" />
+        )}
       </div>
 
       <div className="hymn-options">
@@ -403,7 +501,7 @@ export function HymnalMain({ state, hymnal }: { state: ServiceState; hymnal: Hym
             {strings.hymnSync}
           </label>
         ) : (
-          kind !== 'none' && <span className="dim small">{strings.hymnNoTimes}</span>
+          kind !== 'none' && <span className="dim small">{hymn.book === 'antiguo' ? strings.hymnOldNoTimes : strings.hymnNoTimes}</span>
         )}
       </div>
 

@@ -2,8 +2,9 @@ import { app } from 'electron'
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { dirname, extname, join, relative, resolve } from 'node:path'
-import type { HymnAudio, HymnChoice, HymnInfo, HymnalState, Settings } from '../shared/types'
-import { byFileName, typeByExtension } from './fileTypes'
+import type { HymnAudio, HymnBook, HymnChoice, HymnInfo, HymnalState, Settings } from '../shared/types'
+import { byFileName, isSkippedDir, typeByExtension } from './fileTypes'
+import { prepareFile } from './prepare'
 import { saveSettings } from './settings'
 
 /**
@@ -23,13 +24,25 @@ import { saveSettings } from './settings'
  *
  * A hymn is found by the number at the start of the name, so the names of the
  * music files do not need to be the same as the names of the picture folders.
+ *
+ * The old hymnal (Himnario antiguo) is a second folder with one PowerPoint
+ * (or PDF) and the music of each hymn, by number, in any subfolders:
+ *
+ *   123 - Titulo.pptx                     the slides (made into pictures when first used)
+ *   Cantado/123 - Titulo.mp3              sung (a folder name with "cant", "voz" or "sung")
+ *   Pistas/123 - Titulo.mp3               track only (any other music file)
+ *
+ * Numbers are the same in both hymnals, so a hymn is known by book and number.
  */
 
 let settings: Settings
-let state: HymnalState = { root: '', found: false, hymns: [], oldProgram: false, importTarget: '', importing: null, importResult: null }
+let state: HymnalState = { root: '', found: false, hymns: [], old: { root: '', count: 0 }, oldProgram: false, importTarget: '', importing: null, importResult: null }
 let importing: HymnalState['importing'] = null
 let importResult: HymnalState['importResult'] = null
-let byNumber = new Map<number, HymnInfo>()
+/** "nuevo:100", "antiguo:100" → hymn. */
+let byKey = new Map<string, HymnInfo>()
+/** Old hymnal: the pictures made from each PowerPoint, by file path (kept when the folder is read again). */
+const oldPages = new Map<string, { pages: HymnInfo['pages']; pageUrls: string[]; error?: string }>()
 let notify: () => void = () => {}
 
 const musicFolders: Record<Exclude<HymnAudio, 'none'>, string> = { sung: 'Cantado', instrumental: 'Instrumental' }
@@ -65,8 +78,50 @@ export function hymnalState(): HymnalState {
   return state
 }
 
-export function findHymn(number: number): HymnInfo | undefined {
-  return byNumber.get(number)
+export function findHymn(number: number, book: HymnBook = 'nuevo'): HymnInfo | undefined {
+  return byKey.get(`${book}:${number}`)
+}
+
+/** The folder of the old hymnal, or '' when none is chosen. */
+export function oldHymnalRoot(): string {
+  return settings?.hymnalOldFolder ?? ''
+}
+
+export function setOldHymnalFolder(path: string): void {
+  settings.hymnalOldFolder = path || undefined
+  saveSettings(settings)
+  rescanHymnal()
+}
+
+/**
+ * Make the slide pictures of an old hymn from its PowerPoint (in the media
+ * cache, like any PowerPoint in the playlist). Tells the windows when done.
+ */
+export function prepareOldHymn(number: number): void {
+  const hymn = findHymn(number, 'antiguo')
+  const file = hymn?.presentation
+  if (!file) return
+  const known = oldPages.get(file)
+  if (known && known.pages !== 'error') return
+  oldPages.set(file, { pages: 'converting', pageUrls: [] })
+  applyOldPages(hymn)
+  notify()
+  prepareFile(file, 'slides', () => {})
+    .then((prepared) => oldPages.set(file, { pages: 'ready', pageUrls: prepared.pageUrls ?? [] }))
+    .catch((err: Error) => oldPages.set(file, { pages: 'error', pageUrls: [], error: err.message }))
+    .finally(() => {
+      const now = findHymn(number, 'antiguo')
+      if (now) applyOldPages(now)
+      state = { ...state, hymns: [...state.hymns] }
+      notify()
+    })
+}
+
+function applyOldPages(hymn: HymnInfo): void {
+  const known = hymn.presentation ? oldPages.get(hymn.presentation) : undefined
+  hymn.pageUrls = known?.pageUrls ?? []
+  hymn.pages = known?.pages
+  hymn.pagesError = known?.error
 }
 
 /** Read the folder again and tell the windows. */
@@ -168,17 +223,21 @@ function hymnalUrl(...parts: string[]): string {
 /** The music of a hymn item as a media:// URL, or null (no music, or the file is missing). */
 export function hymnAudioUrl(choice: HymnChoice): string | null {
   if (choice.audio === 'none') return null
-  const files = byNumber.get(choice.number)?.[choice.audio] ?? []
+  const files = findHymn(choice.number, choice.book)?.[choice.audio] ?? []
   const file = files[choice.track ?? 0] ?? files[0]
-  return file ? hymnalUrl('Musica', musicFolders[choice.audio], file) : null
+  if (!file) return null
+  // Old hymnal: the music list has paths inside its folder ("Pistas/123 - Titulo.mp3").
+  if (choice.book === 'antiguo') return `media://hymnal-old/${file.split('/').map(encodeURIComponent).join('/')}`
+  return hymnalUrl('Musica', musicFolders[choice.audio], file)
 }
 
 /**
  * The file for a path in the hymnal folder ("/Letra/001 - …/01.jpg"), or null.
  * Only files inside the hymnal folder: no "..", no other folders.
  */
-export function hymnalFile(pathname: string): string | null {
-  const root = hymnalRoot()
+export function hymnalFile(pathname: string, book: HymnBook = 'nuevo'): string | null {
+  const root = book === 'antiguo' ? oldHymnalRoot() : hymnalRoot()
+  if (!root) return null
   let file: string
   try {
     file = resolve(root, ...pathname.split('/').filter(Boolean).map(decodeURIComponent))
@@ -283,6 +342,7 @@ function scan(): void {
         const nameTitle = dir.name.replace(/^\s*\d+\s*[-–.]?\s*/, '')
         const times = (info?.times ?? []).filter((t) => Number.isFinite(t) && t > 0)
         hymns.push({
+          book: 'nuevo',
           number,
           title: info?.title?.trim() || nameTitle || `Himno ${number}`,
           pageUrls: pages.map((p) => hymnalUrl('Letra', dir.name, p)),
@@ -296,6 +356,76 @@ function scan(): void {
     console.error('Could not read the hymnal folder:', err)
   }
   hymns.sort((a, b) => a.number - b.number)
-  state = { root, found: hymns.length > 0, hymns, oldProgram: isOldProgramFolder(root), importTarget: importTarget(), importing, importResult }
-  byNumber = new Map(hymns.map((h) => [h.number, h]))
+  const old = scanOld()
+  state = {
+    root,
+    found: hymns.length > 0,
+    hymns: [...hymns, ...old],
+    old: { root: oldHymnalRoot(), count: old.length },
+    oldProgram: isOldProgramFolder(root),
+    importTarget: importTarget(),
+    importing,
+    importResult
+  }
+  byKey = new Map(state.hymns.map((h) => [`${h.book}:${h.number}`, h]))
+}
+
+const presentationExtensions = new Set(['.pptx', '.ppt', '.ppsx', '.pps', '.pdf', '.odp'])
+
+/**
+ * Read the old hymnal folder: every PowerPoint (or PDF) and music file whose
+ * name starts with a number, in the folder and its subfolders (4 levels).
+ * A hymn needs a PowerPoint; its music is optional.
+ */
+function scanOld(): HymnInfo[] {
+  const root = oldHymnalRoot()
+  if (!root || !existsSync(root)) return []
+  const presentations = new Map<number, string>()
+  const music = { sung: new Map<number, string[]>(), instrumental: new Map<number, string[]>() }
+  const walk = (dir: string, depth: number): void => {
+    let entries
+    try {
+      entries = readdirSync(dir, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const e of entries) {
+      if (e.name.startsWith('.') || e.name.startsWith('~$')) continue
+      const full = join(dir, e.name)
+      if (e.isDirectory()) {
+        if (depth < 4 && !isSkippedDir(e.name.toLowerCase())) walk(full, depth + 1)
+        continue
+      }
+      const number = leadingNumber(e.name)
+      if (number === null) continue
+      const ext = extname(e.name).toLowerCase()
+      if (presentationExtensions.has(ext)) {
+        // Two files for one number: keep the first by name (a .pptx before its .pdf copy).
+        if (!presentations.has(number) || byFileName(e.name, presentations.get(number)!.split(/[\\/]/).pop()!) < 0) presentations.set(number, full)
+      } else if (typeByExtension[ext] === 'audio') {
+        // Paths inside the folder with "/", so they can be put in a media:// address.
+        const inside = relative(root, full).split(/[\\/]/).join('/')
+        const kind = /cant|voz|sung|vocal/i.test(relative(root, dir)) ? 'sung' : 'instrumental'
+        music[kind].set(number, [...(music[kind].get(number) ?? []), inside])
+      }
+    }
+  }
+  walk(root, 0)
+  const hymns: HymnInfo[] = []
+  for (const [number, file] of presentations) {
+    const name = file.split(/[\\/]/).pop()!.replace(/\.[^.]+$/, '')
+    const hymn: HymnInfo = {
+      book: 'antiguo',
+      number,
+      title: name.replace(/^\s*\d+\s*[-–.]?\s*/, '').trim() || `Himno ${number}`,
+      pageUrls: [],
+      sung: (music.sung.get(number) ?? []).sort(byFileName),
+      instrumental: (music.instrumental.get(number) ?? []).sort(byFileName),
+      times: [],
+      presentation: file
+    }
+    applyOldPages(hymn)
+    hymns.push(hymn)
+  }
+  return hymns.sort((a, b) => a.number - b.number)
 }

@@ -62,7 +62,8 @@ export function registerMediaScheme(): void {
 
 /**
  * Serve files from the media cache as media://cache/<path in the cache>, and
- * files of the hymnal as media://hymnal/<path in the hymnal folder>.
+ * files of the hymnal as media://hymnal/<path in the hymnal folder>, and the
+ * music of the old hymnal as media://hymnal-old/<path in its folder>.
  * Only files inside those two folders can be loaded. Range requests are
  * supported, so the video player can jump to any time.
  */
@@ -70,7 +71,14 @@ export function handleMediaScheme(): void {
   protocol.handle('media', (request) => {
     const url = new URL(request.url)
     // media://cache/… is the media cache; media://hymnal/… is the hymnal folder.
-    const file = url.hostname === 'cache' ? cacheFile(url.pathname) : url.hostname === 'hymnal' ? hymnalFile(url.pathname) : null
+    const file =
+      url.hostname === 'cache'
+        ? cacheFile(url.pathname)
+        : url.hostname === 'hymnal'
+          ? hymnalFile(url.pathname)
+          : url.hostname === 'hymnal-old'
+            ? hymnalFile(url.pathname, 'antiguo')
+            : null
     if (!file) return new Response('Not found', { status: 404 })
     const size = statSync(file).size
     const type = mimeType(file)
