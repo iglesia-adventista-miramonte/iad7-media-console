@@ -1,7 +1,9 @@
 # Changes
 
-## Not released yet
+## 2.1.0 – 2026-11-15
 
+- New "Window capture…" in the Add menu of the playlist: show a window of another program on the screens, live. For example Brave, when the preacher wants to show a web page or a YouTube video that is not downloaded (Brave blocks the ads). "Cut off edges" hides the tabs and the address bar. The sound plays from that program. Keep the window open and not minimized.
+- New "YouTube video…" in the Add menu: paste a link, choose video (MP4, with the picture size) or sound only (MP3), and the folder (Downloads the first time). The item is added to the playlist at once, and its row shows the download. It can go live when it is ready. The first time, the app gets the YouTube downloader (about 23 MB), so it needs internet.
 - Hymnal: the old hymnal (Himnario antiguo) can be added. Choose its folder in the Hymnal tab: one PowerPoint (or PDF) and the music of each hymn, by number. Three buttons under the search choose Nuevo (N), Antiguo (A) or both, and each hymn shows (N) or (A) after its title.
 - Hymnal: "Import from the old program…" copies the pictures, music and slide times of the old "Himnario Adventista" program into the hymnal folder. Run it again at any time to repair the folder; files already there are not copied again. When "Change folder…" picks the old program's folder, the app asks if it should import it.
 - Hymnal: when you change a slide by hand (arrow keys or clicker), the slides keep changing by themselves: that slide starts its own time, and the next slides follow after their own times. Before, they waited for the music to reach the next slide.
