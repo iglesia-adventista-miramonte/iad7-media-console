@@ -5,6 +5,7 @@ import type { ClickerAction, ClickerStatus, Settings } from '../shared/types'
 import type { GuardConfig, GuardMessage } from './clickerGuard'
 import { clickerKeyActions as keyActions, deviceKey, vidPid } from './clickerKeys'
 import { saveSettings } from './settings'
+import { mainStrings } from './strings'
 
 /**
  * Presenter clicker in the background (SPEC 5.8, Windows only).
@@ -270,7 +271,7 @@ function loadWin32(window: BrowserWindow): Win32 {
   const hwnd = handleBuffer.length >= 8 ? handleBuffer.readBigUInt64LE(0) : BigInt(handleBuffer.readUInt32LE(0))
   // Keyboards (usage page 1, usage 6). INPUTSINK: also while another program is in front.
   const ok = RegisterRawInputDevices({ usUsagePage: 1, usUsage: 6, dwFlags: RIDEV_INPUTSINK, hwndTarget: hwnd }, 1, koffi.sizeof(RAWINPUTDEVICE))
-  if (!ok) throw new Error('Windows did not allow listening to keys in the background.')
+  if (!ok) throw new Error(mainStrings.keysNotAllowed)
 
   // RAWINPUTHEADER: 24 bytes on 64-bit Windows, 16 on 32-bit. RAWKEYBOARD follows it.
   const headerSize = process.arch === 'ia32' ? 16 : 24

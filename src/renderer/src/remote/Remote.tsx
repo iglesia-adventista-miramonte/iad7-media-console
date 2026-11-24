@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { RemoteCommand, RemoteGroup, RemoteState } from '../../../shared/types'
-import { formatTime, strings } from '../strings'
+import { formatTime, setLanguage, strings } from '../strings'
 
 // The remote control page (SPEC section 11). It runs in the browser of a phone
 // or another computer, gets the state from the app over Server-Sent Events,
@@ -45,7 +45,11 @@ function useRemote() {
     es.onopen = () => setConnected(true)
     es.onmessage = (e) => {
       setConnected(true)
-      setState(JSON.parse(e.data) as RemoteState)
+      const next = JSON.parse(e.data) as RemoteState
+      // The remote page uses the language of the app.
+      setLanguage(next.language)
+      document.documentElement.lang = next.language
+      setState(next)
     }
     es.addEventListener('signout', () => {
       es.close()

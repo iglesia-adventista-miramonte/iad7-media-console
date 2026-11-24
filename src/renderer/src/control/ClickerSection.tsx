@@ -70,7 +70,7 @@ export function ClickerSection() {
             <span className="label-inline">{strings.clickerLastPress}</span>{' '}
             {last ? (
               <span key={last.at} className="clicker-press">
-                {strings.clickerActions[last.action]} · {new Date(last.at).toLocaleTimeString()}
+                {strings.clickerActions[last.action]} · {new Date(last.at).toLocaleTimeString(strings.locale)}
               </span>
             ) : (
               <span className="dim">{strings.clickerNoPress}</span>

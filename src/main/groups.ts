@@ -4,6 +4,7 @@ import type { GroupConfig, MediaRef, Settings } from '../shared/types'
 import { cacheFile, mediaUrl } from './cache'
 import { typeByExtension } from './fileTypes'
 import { newGroup, saveSettings } from './settings'
+import { mainStrings } from './strings'
 
 // Group settings (screens per group, idle screen) and the church logo.
 
@@ -57,7 +58,7 @@ function group(groupId: string): GroupConfig | undefined {
 }
 
 export function addGroup(name: string): void {
-  settings.groups.push(newGroup(name.trim() || `Group ${settings.groups.length + 1}`))
+  settings.groups.push(newGroup(name.trim() || mainStrings.groupNumbered(settings.groups.length + 1)))
   changed()
 }
 

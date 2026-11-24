@@ -94,7 +94,12 @@ export interface Settings {
   clicker?: ClickerSettings
   /** The last choices in the YouTube dialog, so the next download starts with them. */
   youtube?: YoutubeChoices
+  /** The language of the app's buttons and messages. Not set: Spanish. */
+  language?: Language
 }
+
+/** The languages of the app's buttons and messages. */
+export type Language = 'es' | 'en'
 
 // ---- YouTube download (yt-dlp) ----
 
@@ -315,6 +320,8 @@ export interface RemoteState {
   hasLogo: boolean
   music: { title: string | null; playing: boolean; hasPlaylist: boolean }
   audioItem: { title: string; playing: boolean } | null
+  /** The language of the app, so the remote page uses the same one. */
+  language: Language
 }
 
 /** The commands a remote may send. Nothing else is accepted. */
@@ -506,9 +513,24 @@ export interface AudioState {
     volume: number
     /** A hymn whose slides change by themselves: seconds until the next slide, or null. */
     nextSlideIn?: number | null
+    /** The media:// address of the sound, for the waveform. */
+    url: string
   } | null
   /** Output level, 0..1 for left and right. */
   levels: { l: number; r: number }
+}
+
+/**
+ * How loud the sound of a file is over time, for the waveform under the time bar.
+ * `peaks[i]` is the loudest sample (0..1) from i×step to (i+1)×step seconds.
+ */
+export interface Waveform {
+  step: number
+  peaks: number[]
+  /** Seconds until the first sound that is not quiet, or null if the whole file is quiet. */
+  firstSound: number | null
+  /** The file has no sound track at all (a video without sound). */
+  noAudio: boolean
 }
 
 /** What the hidden audio window must play. */
@@ -1193,6 +1215,13 @@ export interface MediaConsoleApi {
   onUpdateChanged(callback: (status: UpdateStatus) => void): () => void
   /** Close the app now and install the downloaded version. Returns 'live' (and does nothing) while something is on the screens. */
   installUpdate(): Promise<LiveBlock>
+  /** The waveform of a media:// file (video or audio), or null when it cannot be read. Made once per file. */
+  waveform(url: string): Promise<Waveform | null>
+  /** The language chosen when this window opened. */
+  initialLanguage: Language
+  /** The operator chose another language: every window shows its text in it. */
+  onLanguageChanged(callback: (language: Language) => void): () => void
+  setLanguage(language: Language): Promise<void>
   /** The operator closed the control window while something is on the screens. The app did not close. */
   onCloseBlocked(callback: () => void): () => void
   /** Close the app, also while something is on the screens (after the operator said yes). */

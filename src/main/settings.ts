@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { GroupConfig, Settings } from '../shared/types'
+import { mainStrings } from './strings'
 
 function settingsPath(): string {
   return join(app.getPath('userData'), 'settings.json')
@@ -14,7 +15,7 @@ export function newGroup(name: string): GroupConfig {
 
 /** First run: the two groups from SPEC section 2. Stage shows the stage view (SPEC 7). */
 function defaults(): Settings {
-  return { outputs: [], groups: [newGroup('Main'), { ...newGroup('Stage'), stageView: true }] }
+  return { outputs: [], groups: [newGroup(mainStrings.groupMain), { ...newGroup(mainStrings.groupStage), stageView: true }] }
 }
 
 export function loadSettings(): Settings {

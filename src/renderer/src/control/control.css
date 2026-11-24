@@ -3076,3 +3076,42 @@
   background: var(--preview);
   transition: width 0.2s linear;
 }
+
+/* ---- Waveform behind the time bars ---- */
+.wave-track {
+  position: relative;
+  flex: 1;
+  min-width: 80px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+}
+.wave-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+/* The range input stays on top for clicks, drags and keys; the canvas draws the bar and the playhead. */
+.wave-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.wave-track .marker {
+  top: 0;
+  height: 100%;
+}
+.wave-note {
+  color: var(--warn);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.audio-wave {
+  margin: 8px 0 12px;
+}

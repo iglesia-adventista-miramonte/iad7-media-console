@@ -3,6 +3,7 @@ import type {
   AudioRender,
   AudioState,
   HymnalState,
+  Language,
   MediaConsoleApi,
   OutputRender,
   PdfJob,
@@ -139,6 +140,10 @@ const api: MediaConsoleApi = {
   getUpdate: () => invoke('update:get'),
   onUpdateChanged: (cb) => listen<UpdateStatus>('update:changed', cb),
   installUpdate: () => invoke('update:install'),
+  waveform: (url) => invoke('media:waveform', url),
+  initialLanguage: ipcRenderer.sendSync('language:get'),
+  onLanguageChanged: (cb) => listen<Language>('language:changed', cb),
+  setLanguage: (language) => invoke('language:set', language),
   onCloseBlocked: (cb) => listen<void>('app:closeBlocked', cb),
   quitApp: () => invoke('app:quit'),
 

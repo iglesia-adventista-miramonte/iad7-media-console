@@ -7,6 +7,7 @@ import { join } from 'node:path'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import type { YoutubeInfo, YoutubeSource } from '../shared/types'
+import { mainStrings } from './strings'
 
 /**
  * YouTube download with yt-dlp (https://github.com/yt-dlp/yt-dlp).
@@ -35,7 +36,7 @@ function ytDlpPath(): string {
 }
 
 /** The ffmpeg program that comes with the app, or null if it is missing. */
-function ffmpegPath(): string | null {
+export function ffmpegPath(): string | null {
   try {
     const req = createRequire(__filename)
     const path = (req('ffmpeg-static') as string | null) ?? null
@@ -79,7 +80,7 @@ async function setup(onProgress: (fraction: number | null) => void): Promise<voi
 
 async function downloadFile(url: string, target: string, onProgress: (fraction: number) => void): Promise<void> {
   const res = await fetch(url)
-  if (!res.ok || !res.body) throw new Error(`Could not download the YouTube downloader (${res.status}). Check the internet connection.`)
+  if (!res.ok || !res.body) throw new Error(mainStrings.ytDownloaderFailed(res.status))
   const total = Number(res.headers.get('content-length')) || 0
   const tmp = `${target}.part`
   let done = 0
@@ -135,8 +136,8 @@ function run(args: string[], onLine: (line: string) => void, keep?: (p: ChildPro
     p.on('close', (code, signal) => {
       if (partial) onLine(partial)
       if (code === 0) return resolve(out)
-      if (signal) return reject(new Error('Stopped.'))
-      reject(new Error(errorMessage(err) || `The download did not work (code ${code}).`))
+      if (signal) return reject(new Error(mainStrings.ytStopped))
+      reject(new Error(errorMessage(err) || mainStrings.ytFailed(code)))
     })
   })
 }
@@ -145,10 +146,10 @@ function run(args: string[], onLine: (line: string) => void, keep?: (p: ChildPro
 function errorMessage(stderr: string): string {
   const lines = stderr.split(/\r?\n/).filter((l) => l.startsWith('ERROR:'))
   const text = (lines.at(-1) ?? '').replace(/^ERROR:\s*/, '').replace(/^\[[^\]]+\]\s*[\w-]+:\s*/, '')
-  if (/Unsupported URL|is not a valid URL/i.test(text)) return 'This is not a link to a video.'
-  if (/unavailable|Private video|been removed/i.test(text)) return 'This video is not available (private or removed).'
-  if (/Sign in to confirm your age/i.test(text)) return 'YouTube asks to sign in for this video (age limit). It cannot be downloaded.'
-  if (/getaddrinfo|Failed to resolve|Unable to download webpage|timed out/i.test(text)) return 'No internet connection, or YouTube did not answer.'
+  if (/Unsupported URL|is not a valid URL/i.test(text)) return mainStrings.ytNotVideoLink
+  if (/unavailable|Private video|been removed/i.test(text)) return mainStrings.ytUnavailable
+  if (/Sign in to confirm your age/i.test(text)) return mainStrings.ytAgeLimit
+  if (/getaddrinfo|Failed to resolve|Unable to download webpage|timed out/i.test(text)) return mainStrings.ytNoInternet
   return text
 }
 
@@ -179,7 +180,7 @@ export async function lookup(url: string, onSetup: (fraction: number | null) => 
     formats?: Format[]
     is_live?: boolean
   }
-  if (data.is_live) throw new Error('This is a live stream. Only videos that ended can be downloaded.')
+  if (data.is_live) throw new Error(mainStrings.ytLiveStream)
   const formats = data.formats ?? []
   const size = (f: Format) => f.filesize ?? f.filesize_approx ?? 0
   const audio = formats.filter((f) => f.vcodec === 'none' && f.acodec && f.acodec !== 'none')
@@ -245,7 +246,7 @@ export function download(
   const done = (async () => {
     onState('downloading', 0)
     await ensureYtDlp(() => {})
-    if (cancelled) throw new Error('Stopped.')
+    if (cancelled) throw new Error(mainStrings.ytStopped)
     if (!existsSync(source.folder)) mkdirSync(source.folder, { recursive: true })
     const hasFfmpeg = !!ffmpegPath()
     const formatArgs =
@@ -298,7 +299,7 @@ export function download(
       },
       (p) => (child = p)
     )
-    if (!file || !existsSync(file)) throw new Error('The download ended, but the file was not found.')
+    if (!file || !existsSync(file)) throw new Error(mainStrings.ytFileMissing)
     return file
   })()
   return {

@@ -53,7 +53,7 @@ export function StartScreen({ state, onClose }: { state: ServiceState; onClose: 
       <div className="start-panel">
         <header className="start-head">
           <h1 className="start-title">{strings.appName}</h1>
-          <span className="dim">{now.toLocaleDateString('en', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+          <span className="dim">{now.toLocaleDateString(strings.locale, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
         </header>
 
         <section className="start-section">

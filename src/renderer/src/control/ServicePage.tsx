@@ -11,6 +11,7 @@ import { iconFor, OrderPanel, TypeIcon, type IconKind } from './OrderPanel'
 import { PreviewPanel } from './PreviewPanel'
 import { MediaButton, MediaIcon } from './MediaIcons'
 import { QuickPanel } from './QuickPanel'
+import { useWaveform, WaveNote, WaveTrack } from './Waveform'
 import { ScreensColumn } from './ScreensColumn'
 
 const api = window.mediaConsole
@@ -375,10 +376,15 @@ function StopButton({ title, onClick }: { title: string; onClick: () => void }) 
   )
 }
 
-/** A seek bar that moves while dragged and seeks once, when let go. */
-function SeekBar(props: { time: number | undefined; duration: number; onSeek: (t: number) => void }) {
-  const { time, duration, onSeek } = props
+/**
+ * A seek bar that moves while dragged and seeks once, when let go. With `url`
+ * it shows the waveform of the sound behind the bar, and a note when the
+ * sound starts later in the file (so a quiet start is not taken for a sound problem).
+ */
+function SeekBar(props: { time: number | undefined; duration: number; url?: string; onSeek: (t: number) => void }) {
+  const { time, duration, url, onSeek } = props
   const [dragTime, setDragTime] = useState<number | null>(null)
+  const wave = useWaveform(url)
   const shown = dragTime ?? time ?? 0
   const commit = () => {
     if (dragTime !== null) onSeek(dragTime)
@@ -387,20 +393,23 @@ function SeekBar(props: { time: number | undefined; duration: number; onSeek: (t
   return (
     <>
       <span className="mono">{formatTime(shown)}</span>
-      <input
-        className="timebar"
-        type="range"
-        min={0}
-        max={duration || 1}
-        step={0.1}
-        value={shown}
-        onChange={(e) => setDragTime(Number(e.target.value))}
-        onPointerUp={commit}
-        onKeyUp={commit}
-      />
+      <WaveTrack wave={wave} duration={duration} time={shown} accent="live">
+        <input
+          className="timebar wave-input"
+          type="range"
+          min={0}
+          max={duration || 1}
+          step={0.1}
+          value={shown}
+          onChange={(e) => setDragTime(Number(e.target.value))}
+          onPointerUp={commit}
+          onKeyUp={commit}
+        />
+      </WaveTrack>
       <span className="mono dim" title={formatTime(duration || undefined)}>
         −{formatTime(Math.max(0, duration - shown))}
       </span>
+      <WaveNote wave={wave} time={shown} />
     </>
   )
 }
@@ -445,7 +454,7 @@ function LiveContentRow({ state, content, groups }: { state: ServiceState; conte
           />
           <MediaButton icon="back10" label={strings.back10} quiet onClick={() => void api.seek(content.take, (playback?.currentTime ?? 0) - 10)} />
           <MediaButton icon="forward10" label={strings.forward10} quiet onClick={() => void api.seek(content.take, (playback?.currentTime ?? 0) + 10)} />
-          <SeekBar time={playback?.currentTime} duration={duration} onSeek={(t) => void api.seek(content.take, t)} />
+          <SeekBar time={playback?.currentTime} duration={duration} url={content.url} onSeek={(t) => void api.seek(content.take, t)} />
           {item && (
             <VolumeControl
               value={item.settings.volume ?? 1}
@@ -480,7 +489,7 @@ function LiveAudioRow({ state, item }: { state: ServiceState; item: NonNullable<
         />
         <MediaButton icon="back10" label={strings.back10} quiet onClick={() => void api.controlItemAudio({ seekTo: item.time - 10 })} />
         <MediaButton icon="forward10" label={strings.forward10} quiet onClick={() => void api.controlItemAudio({ seekTo: item.time + 10 })} />
-        <SeekBar time={item.time} duration={item.duration} onSeek={(t) => void api.controlItemAudio({ seekTo: t })} />
+        <SeekBar time={item.time} duration={item.duration} url={item.url} onSeek={(t) => void api.controlItemAudio({ seekTo: t })} />
         <VolumeControl
           value={item.volume}
           onChange={(v) => {

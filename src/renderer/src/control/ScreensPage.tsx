@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import type { GroupConfig, GroupView, OutputStatus, ScreenInfo, ScreensState, ServiceState } from '../../../shared/types'
-import { strings } from '../strings'
+import type { Language, GroupConfig, GroupView, OutputStatus, ScreenInfo, ScreensState, ServiceState } from '../../../shared/types'
+import { languageNames, strings } from '../strings'
 import { ClickerSection } from './ClickerSection'
 import { GroupsEditor, LogoSection } from './GroupsEditor'
 import { useScreensState, useServiceState } from './hooks'
@@ -72,6 +72,7 @@ export function ScreensPage() {
 
       <GroupsEditor state={state} />
       <LogoSection state={state} />
+      <LanguageSection />
       <RemoteSection />
       <ClickerSection />
     </main>
@@ -207,5 +208,26 @@ function ScreenCard(props: {
         )}
       </div>
     </div>
+  )
+}
+
+/** The language of the app's buttons and messages. A change shows at once in every window. */
+function LanguageSection() {
+  return (
+    <section className="panel">
+      <h2 className="label">{strings.languageLabel}</h2>
+      <p className="help">{strings.languageHelp}</p>
+      <select
+        className="input select"
+        value={strings.locale}
+        onChange={(e) => void api.setLanguage(e.target.value as Language)}
+      >
+        {(Object.keys(languageNames) as Language[]).map((l) => (
+          <option key={l} value={l}>
+            {languageNames[l]}
+          </option>
+        ))}
+      </select>
+    </section>
   )
 }

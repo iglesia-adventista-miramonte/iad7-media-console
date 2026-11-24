@@ -5,6 +5,7 @@ import { basename, extname, join } from 'node:path'
 import type { PdfJob } from '../shared/types'
 import { cacheDir, mediaUrl } from './cache'
 import { loadPage, preloadPath } from './pages'
+import { mainStrings } from './strings'
 
 /**
  * Turn PDF pages into PNG pictures in the media cache, with the text of each
@@ -58,7 +59,7 @@ function ensureWindow(): Promise<void> {
     win = null
     ready = null
     // If the window dies during a job, fail the job so the item shows an error.
-    current?.reject(new Error('The PDF window closed'))
+    current?.reject(new Error(mainStrings.pdfWindowClosed))
     current = null
     runNext()
   })

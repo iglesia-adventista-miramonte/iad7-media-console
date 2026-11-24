@@ -1,5 +1,6 @@
 import { open } from 'node:fs/promises'
 import { inflateRawSync } from 'node:zlib'
+import { mainStrings } from './strings'
 
 /**
  * Read single files from a zip file (a .pptx is a zip of XML files) without
@@ -35,7 +36,7 @@ export async function readZipTexts(path: string, filter: (name: string) => boole
         break
       }
     }
-    if (eocd < 0) throw new Error('Not a zip file')
+    if (eocd < 0) throw new Error(mainStrings.notZip)
     const count = tail.readUInt16LE(eocd + 10)
     const dirSize = tail.readUInt32LE(eocd + 12)
     const dirOffset = tail.readUInt32LE(eocd + 16)

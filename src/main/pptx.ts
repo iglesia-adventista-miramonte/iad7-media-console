@@ -4,6 +4,7 @@ import { existsSync, mkdirSync } from 'node:fs'
 import { basename, extname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { cacheDir } from './cache'
+import { mainStrings } from './strings'
 
 /**
  * Convert PowerPoint files to PDF (SPEC section 3). On Windows, use Microsoft
@@ -78,7 +79,7 @@ function convertWithPowerPoint(cachedPath: string, pdfPath: string): Promise<str
         { timeout: 180_000, windowsHide: true, env: { ...process.env, MC_IN: cachedPath, MC_OUT: pdfPath } },
         (err, _stdout, stderr) => {
           if (existsSync(pdfPath)) resolve(pdfPath)
-          else reject(new Error(`PowerPoint could not convert the file: ${stderr?.trim() || err?.message || 'no PDF was made'}`))
+          else reject(new Error(mainStrings.powerPointFailed(stderr?.trim() || err?.message || mainStrings.noPdfMade)))
         }
       )
     })
@@ -124,7 +125,7 @@ function convertWithLibreOffice(soffice: string, cachedPath: string, outDir: str
   return new Promise((resolve, reject) => {
     execFile(soffice, args, { timeout: 180_000, windowsHide: true }, (err, _stdout, stderr) => {
       if (existsSync(pdfPath)) resolve(pdfPath)
-      else reject(new Error(`Conversion failed: ${err?.message ?? stderr ?? 'no PDF was made'}`))
+      else reject(new Error(mainStrings.conversionFailed(err?.message ?? stderr ?? mainStrings.noPdfMade)))
     })
   })
 }

@@ -1,4 +1,5 @@
 import { clickerKeyActions, deviceKey } from './clickerKeys'
+import { mainStrings } from './strings'
 
 /**
  * Clicker key guard (SPEC 5.8, Windows only). This file is a small separate
@@ -201,7 +202,7 @@ function giveUp(): void {
   const keys = held.splice(0).filter((k) => k.verdict !== 'drop')
   win32.stop()
   if (keys.length) win32.type(keys)
-  tell({ type: 'failed', message: 'Windows did not tell which device the keys came from.' })
+  tell({ type: 'failed', message: mainStrings.noKeyDevice })
   log('stopped: no device for several keys in a row')
   setTimeout(() => process.exit(0), 100)
 }
@@ -268,10 +269,10 @@ function loadWin32(): Win32 {
 
   // A window that is never shown. It only receives the raw input messages.
   const hwnd = CreateWindowExW(0, 'STATIC', '', 0, 0, 0, 0, 0, HWND_MESSAGE, 0, 0, null)
-  if (!hwnd) throw new Error('Windows did not make the message window.')
+  if (!hwnd) throw new Error(mainStrings.noMessageWindow)
   // Keyboards (usage page 1, usage 6). INPUTSINK: also while another program is in front.
   if (!RegisterRawInputDevices({ usUsagePage: 1, usUsage: 6, dwFlags: RIDEV_INPUTSINK, hwndTarget: hwnd }, 1, koffi.sizeof(RAWINPUTDEVICE)))
-    throw new Error('Windows did not allow listening to keys in the background.')
+    throw new Error(mainStrings.keysNotAllowed)
 
   // RAWINPUTHEADER: 24 bytes on 64-bit Windows, 16 on 32-bit. RAWKEYBOARD follows it.
   const wide = process.arch !== 'ia32'
@@ -331,7 +332,7 @@ function loadWin32(): Win32 {
     return CallNextHookEx(0, code, wParam, info) as number | bigint
   }, koffi.pointer(HookProc))
   hook = SetWindowsHookExW(WH_KEYBOARD_LL, proc, GetModuleHandleW(null), 0) as number | bigint
-  if (!hook) throw new Error('Windows did not allow the keyboard hook.')
+  if (!hook) throw new Error(mainStrings.noKeyboardHook)
 
   // INPUT: 40 bytes on 64-bit Windows, 28 on 32-bit.
   const inputSize = wide ? 40 : 28

@@ -10,22 +10,23 @@ const api = window.mediaConsole
  * that other people put on the network share. New files have a dot.
  * Subfolders open in place; "All" adds all their files in file-name order.
  */
-const statusLook: Record<SharedState['status'], { css: string; dot: string; label: string }> = {
+/** A function, so the labels follow the chosen language. */
+const statusLook = (): Record<SharedState['status'], { css: string; dot: string; label: string }> => ({
   off: { css: '', dot: 'dot-none', label: '' },
   scanning: { css: 'dim', dot: 'dot-warn', label: strings.scanning },
   watching: { css: 'ok', dot: 'dot-ok', label: strings.watching },
   unreachable: { css: 'bad', dot: 'dot-live', label: strings.unreachable },
   tooBig: { css: 'bad', dot: 'dot-live', label: strings.tooBig }
-}
+})
 
 /** The text under the folder path when no file is listed. */
-const emptyText: Record<SharedState['status'], string> = {
+const emptyText = (): Record<SharedState['status'], string> => ({
   off: '',
   scanning: strings.sharedScanning,
   watching: strings.sharedEmpty,
   unreachable: strings.sharedRetry,
   tooBig: strings.sharedTooBig
-}
+})
 
 /** Smallest height the section can be dragged to, in pixels. */
 const minHeight = 90
@@ -200,9 +201,9 @@ export function SharedSection({ state }: { state: ServiceState }) {
       {resizeHandle}
       <div className="shared-head">
         {title}
-        <span className={`shared-status ${statusLook[shared.status].css}`} title={shared.error}>
-          <span className={`dot ${statusLook[shared.status].dot}`} />
-          {statusLook[shared.status].label}
+        <span className={`shared-status ${statusLook()[shared.status].css}`} title={shared.error}>
+          <span className={`dot ${statusLook()[shared.status].dot}`} />
+          {statusLook()[shared.status].label}
         </span>
         <div className="spacer" />
         {/* When the list is hidden, still show that new files came in. */}
@@ -225,7 +226,7 @@ export function SharedSection({ state }: { state: ServiceState }) {
             </div>
           )}
           <div className="shared-list">
-            {shared.entries.length === 0 && <p className="dim small">{emptyText[shared.status]}</p>}
+            {shared.entries.length === 0 && <p className="dim small">{emptyText()[shared.status]}</p>}
             {renderList('', 0)}
           </div>
         </>

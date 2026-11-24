@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { basename, extname } from 'node:path'
 import { findBook, normalize } from '../shared/bibleBooks'
+import { mainStrings } from './strings'
 
 /**
  * Read a Bible file into one simple format. Supported:
@@ -146,7 +147,7 @@ function parseJson(text: string, out: Builder): { name: string; abbrev: string }
     return meta
   }
   const list = Array.isArray(data) ? data : (data?.books ?? data?.verses)
-  if (!Array.isArray(list)) throw new Error('Unknown JSON format')
+  if (!Array.isArray(list)) throw new Error(mainStrings.unknownJson)
   // A list of books: [{ chapters: [["v1", "v2"], …] }] or [{ chapters: [{ verses: [{ verse, text }] }] }]
   if (list.length && list[0] && typeof list[0] === 'object' && 'chapters' in list[0]) {
     list.forEach((book: Record<string, unknown>, i: number) => {
@@ -223,7 +224,7 @@ export async function readBibleFile(path: string): Promise<BibleData> {
     parseText(raw, out)
   }
 
-  if (out.count === 0) throw new Error('No verses found. Use Zefania XML, OSIS XML, JSON or a text file with book, chapter, verse, text.')
+  if (out.count === 0) throw new Error(mainStrings.noVersesFound)
   // Short name for the version selector: the identifier, a short file name, or the first letters.
   if (!abbrev) abbrev = name.length <= 12 ? name : name.replace(/[^A-Za-z0-9]/g, '').slice(0, 10)
   return { name, abbrev, books: out.books }

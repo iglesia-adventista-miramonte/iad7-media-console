@@ -4,6 +4,7 @@ import { createServer, request as httpRequest, type IncomingMessage, type Server
 import { networkInterfaces } from 'node:os'
 import { basename, extname, join, relative, resolve } from 'node:path'
 import type {
+  Language,
   AudioState,
   RemoteCommand,
   RemoteGroup,
@@ -170,7 +171,8 @@ export function buildRemoteState(
   state: Pick<ServiceState, 'service' | 'groups' | 'playback' | 'nextItemId' | 'target' | 'overlays' | 'logoUrl'>,
   audio: AudioState,
   find: (id: string) => ServiceItem | undefined,
-  ready: (item: ServiceItem) => boolean
+  ready: (item: ServiceItem) => boolean,
+  language: Language
 ): RemoteState {
   const groups: RemoteGroup[] = state.groups.map(({ config, live }) => {
     const c = live.content
@@ -214,7 +216,8 @@ export function buildRemoteState(
       playing: audio.playing,
       hasPlaylist: audio.settings.playlist.length > 0
     },
-    audioItem: audio.item ? { title: audio.item.title, playing: audio.item.playing } : null
+    audioItem: audio.item ? { title: audio.item.title, playing: audio.item.playing } : null,
+    language
   }
 }
 

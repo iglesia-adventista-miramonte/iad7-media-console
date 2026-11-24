@@ -52,6 +52,25 @@ export function cacheFile(pathname: string): string | null {
   return file
 }
 
+/**
+ * The file on disk for a media:// address, or null. media://cache/… is the
+ * media cache, media://hymnal/… the hymnal folder, media://hymnal-old/… the
+ * old hymnal folder. Nothing outside those folders.
+ */
+export function mediaFile(address: string): string | null {
+  let url: URL
+  try {
+    url = new URL(address)
+  } catch {
+    return null
+  }
+  if (url.protocol !== 'media:') return null
+  if (url.hostname === 'cache') return cacheFile(url.pathname)
+  if (url.hostname === 'hymnal') return hymnalFile(url.pathname)
+  if (url.hostname === 'hymnal-old') return hymnalFile(url.pathname, 'antiguo')
+  return null
+}
+
 /** Must run before the app is ready. */
 export function registerMediaScheme(): void {
   protocol.registerSchemesAsPrivileged([
@@ -69,16 +88,7 @@ export function registerMediaScheme(): void {
  */
 export function handleMediaScheme(): void {
   protocol.handle('media', (request) => {
-    const url = new URL(request.url)
-    // media://cache/… is the media cache; media://hymnal/… is the hymnal folder.
-    const file =
-      url.hostname === 'cache'
-        ? cacheFile(url.pathname)
-        : url.hostname === 'hymnal'
-          ? hymnalFile(url.pathname)
-          : url.hostname === 'hymnal-old'
-            ? hymnalFile(url.pathname, 'antiguo')
-            : null
+    const file = mediaFile(request.url)
     if (!file) return new Response('Not found', { status: 404 })
     const size = statSync(file).size
     const type = mimeType(file)

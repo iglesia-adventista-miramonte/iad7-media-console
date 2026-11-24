@@ -1,8 +1,25 @@
-import type { ClickerAction, EndAction, IdleKind, ImageFit, ItemType, ServiceItem, TextBackground, TextStyleKind, UndoKind } from '../../shared/types'
+import type { Language, ClickerAction, EndAction, IdleKind, ImageFit, ItemType, ServiceItem, TextBackground, TextStyleKind, UndoKind } from '../../shared/types'
 
-// All UI text lives here, so it can be translated later.
+// All UI text lives here, in English and in Spanish. The operator picks the
+// language on the Setup page. The app name stays "Media Console" in both.
 
-export const strings = {
+const undoKindsEn: Record<UndoKind, string> = {
+  add: 'add to the playlist',
+  remove: 'remove from the playlist',
+  move: 'move in the playlist',
+  copy: 'copy from a past service'
+}
+
+const undoKindsEs: Record<UndoKind, string> = {
+  add: 'agregar a la lista',
+  remove: 'quitar de la lista',
+  move: 'mover en la lista',
+  copy: 'copiar de un servicio anterior'
+}
+
+const en = {
+  /** For dates and times (toLocaleDateString). */
+  locale: 'en',
   appName: 'Media Console',
   tabService: 'Service',
   tabScreens: 'Setup',
@@ -184,7 +201,7 @@ export const strings = {
   usedText: (u?: { count: number; last: number }) => {
     if (!u) return 'Never used'
     if (u.count > 2) return `Used ${u.count} times`
-    return `Used ${new Date(u.last).toLocaleDateString('es', { day: 'numeric', month: 'short' })}`
+    return `Used ${new Date(u.last).toLocaleDateString('en', { day: 'numeric', month: 'short' })}`
   },
   libTip: 'Double-click or Enter adds a file to the playlist. You can also drag a file to the Playlist tab.',
   libSelectHint: 'Select a file to see its details.',
@@ -456,7 +473,7 @@ export const strings = {
 
   // Undo
   undo: 'Undo',
-  undoHint: (kind: UndoKind) => `Undo: ${undoKinds[kind]} (Ctrl+Z)`,
+  undoHint: (kind: UndoKind) => `Undo: ${undoKindsEn[kind]} (Ctrl+Z)`,
   nothingToUndo: 'Nothing to undo',
 
   // Text style window
@@ -577,6 +594,11 @@ export const strings = {
   audioLabel: 'Audio',
   stopMusic: 'Stop background music',
   audioItemNote: 'Audio only: the screens do not change.',
+  waveNoAudio: 'This file has no sound',
+  waveAllQuiet: 'The whole file is quiet',
+  waveSoundStarts: (at: string, wait: string) => `Sound starts at ${at} (in ${wait})`,
+  waveSoundStartsHint: 'The start of this file is quiet. Nothing is wrong with the speakers: the sound comes when the playhead reaches the waveform.',
+  waveLength: (length: string) => `Length ${length}`,
 
   // Live panel
   liveLabel: 'Live',
@@ -747,14 +769,789 @@ export const strings = {
   rNoMusic: 'No background music',
   rMusicNext: 'Next track',
   rFadeOut: 'Fade out',
-  rAudioItem: (title: string) => `Audio: ${title}`
+  rAudioItem: (title: string) => `Audio: ${title}`,
+  // Language setting (Setup page)
+  languageLabel: 'Language',
+  languageHelp: 'The language of the buttons and messages of the app. Hymns and the Bible do not change.'
 }
 
-const undoKinds: Record<UndoKind, string> = {
-  add: 'add to the playlist',
-  remove: 'remove from the playlist',
-  move: 'move in the playlist',
-  copy: 'copy from a past service'
+const es: typeof en = {
+  locale: 'es',
+  appName: 'Media Console',
+  tabService: 'Servicio',
+  tabScreens: 'Configuración',
+
+  // Screens page
+  screensLabel: 'Pantallas',
+  screensHelp:
+    'Las pantallas están en el mismo orden que en la configuración de pantalla de Windows, de izquierda a derecha. Activa "Usar como salida" en cada pantalla que muestra el servicio y luego elige su grupo.',
+  missingLabel: 'Pantallas guardadas que no se encuentran',
+  missingHelp: 'Estas pantallas están guardadas pero no están conectadas ahora. Revisa el cable y la configuración de pantalla de Windows.',
+  testAll: 'Probar todas las pantallas',
+  closeTests: 'Cerrar ventanas de prueba',
+  test: 'Probar',
+  closeTest: 'Cerrar prueba',
+  testOpen: 'Prueba abierta',
+  remove: 'Quitar',
+  folderOpen: 'Clic para mostrar los archivos',
+  folderClose: 'Clic para ocultar los archivos',
+  removeFromOrder: 'Quitar de la lista (Supr). Ctrl+Z lo devuelve.',
+  useScreen: 'Usar como salida',
+  useScreenHelp: 'Actívalo para mostrar el servicio en esta pantalla. Desactívalo para dejar de usarla (se borran su nombre y su grupo).',
+  defaultScreenName: (n: number) => `Pantalla ${n}`,
+  screenName: 'Nombre de la pantalla',
+  nameHelp: 'Nombre de la pantalla. Pulsa Enter para guardar.',
+  noGroup: 'Sin grupo',
+  groupSelectHelp: 'El grupo de esta pantalla. Las pantallas de un mismo grupo muestran lo mismo.',
+  controlScreen: 'Pantalla de control',
+  controlScreenHelp: 'Esta aplicación está en esta pantalla, así que no muestra salida.',
+  notUsed: 'Sin usar',
+  groupOption: (name: string) => `Grupo: ${name}`,
+  updateKey: 'Usar esta pantalla',
+  primary: 'Principal',
+  consoleScreen: 'Esta aplicación',
+  consoleOutputWarn:
+    'Esta es la pantalla de esta ventana de control, así que esta salida no se abre. Mueve esta ventana a otra pantalla o elige otra pantalla.',
+  scale: (f: number) => `escala ${Math.round(f * 100)}%`,
+  position: (x: number, y: number) => `en ${x}, ${y}`,
+  savedKey: (key: string) => `Guardada como: ${key}`,
+  noScreens: 'No se encontraron pantallas.',
+  testEscHint: 'Pulsa Esc para cerrar esta ventana de prueba',
+  testUnnamed: 'Salida sin nombre',
+  windowSize: (w: number, h: number) => `ventana ${w}×${h}`,
+
+  // Order panel
+  orderLabel: 'Lista',
+  addMenu: 'Agregar',
+  addMenuFiles: 'Archivos…',
+  addMenuFilesHint: 'Videos, imágenes, audio, PDF o PowerPoint',
+  addMenuFolder: 'Carpeta…',
+  addMenuYoutube: 'Video de YouTube…',
+  addMenuYoutubeHint: 'Descargar un video o una canción desde un enlace de YouTube',
+  addMenuCapture: 'Captura de ventana…',
+  addMenuCaptureHint: 'Mostrar una ventana de otro programa, por ejemplo Brave',
+
+  // Window capture
+  captureDialogTitle: 'Mostrar una ventana',
+  captureDialogHelp:
+    'Elige la ventana que se muestra en las pantallas. Deja esa ventana abierta y sin minimizar (puede estar detrás de otras ventanas). Su sonido sale de ese programa, no de esta aplicación.',
+  captureRefresh: 'Actualizar',
+  captureLoading: 'Buscando ventanas…',
+  captureNone: 'No se encontraron ventanas. Abre el programa (por ejemplo Brave) y luego haz clic en Actualizar.',
+  captureCancel: 'Cancelar',
+  captureMissing: 'No se encontró esta ventana. Puede que el programa esté cerrado. Ábrelo y luego usa "Cambiar ventana…".',
+  captureClosed: 'Se cerró la ventana. Ábrela otra vez y luego usa "Cambiar ventana…".',
+  captureChange: 'Cambiar ventana…',
+  captureFrom: (name: string) => `Ventana: ${name}`,
+  captureNote: 'Imagen en vivo de la ventana. No la minimices. El sonido sale de ese programa.',
+  captureCrop: 'Recortar bordes',
+  captureCropHint: 'Usa Arriba para ocultar las pestañas y la barra de direcciones de un navegador. O pulsa F11 en el navegador para pantalla completa.',
+  cropSides: { cropTop: 'Arriba', cropBottom: 'Abajo', cropLeft: 'Izquierda', cropRight: 'Derecha' } as Record<'cropTop' | 'cropBottom' | 'cropLeft' | 'cropRight', string>,
+  cropReset: 'Sin recorte',
+
+  // YouTube download
+  ytTitle: 'Agregar un video de YouTube',
+  ytLinkPlaceholder: 'Pega aquí un enlace de YouTube',
+  ytLookup: 'Buscar',
+  ytLooking: 'Buscando el video…',
+  ytSetup: (fraction: number) => `Obteniendo el descargador de YouTube (solo la primera vez)… ${Math.round(fraction * 100)}%`,
+  ytKind: 'Descargar',
+  ytVideo: 'Video (MP4)',
+  ytAudio: 'Solo sonido (MP3)',
+  ytQuality: 'Tamaño de imagen',
+  ytAudioNote: 'Un MP3 es un elemento de audio: suena en la capa de audio, como la otra música de la lista.',
+  ytSaveIn: 'Guardar en',
+  ytChange: 'Cambiar…',
+  ytCancel: 'Cancelar',
+  ytAdd: 'Descargar y agregar',
+  ytHelp: 'El elemento se agrega a la lista ahora y la fila muestra la descarga. Se puede mostrar en vivo cuando esté listo.',
+  ytRights: 'Descarga solo videos que la iglesia puede mostrar.',
+  ytBigNote: 'Los tamaños grandes tardan más en descargarse y necesitan una computadora rápida. 1080 es suficiente para la mayoría de los proyectores.',
+  ytHeight: (h: number) => (h >= 2160 ? '4K' : h >= 1440 ? '1440' : `${h}`),
+  ytBytes: (bytes: number) => (bytes ? (bytes >= 1e9 ? `${(bytes / 1e9).toFixed(1)} GB` : `${Math.max(1, Math.round(bytes / 1e6))} MB`) : ''),
+  ytLive: 'en directo',
+  downloadError: 'falló la descarga',
+  retryDownload: 'Descargar otra vez',
+  notReadyDownload: 'El archivo se está descargando. Se puede mostrar en vivo cuando la descarga y la copia estén listas.',
+  fromYoutube: 'de YouTube',
+  progress: (done: number, total: number) => `${done} de ${total} hechos`,
+  resetProgress: 'Reiniciar',
+  resetProgressHint: 'Marcar todos los elementos como no hechos',
+  resetProgressConfirm: '¿Reiniciar?',
+  emptyOrder: 'Suelta aquí videos, imágenes, PDF o PowerPoint, o usa Agregar. Los archivos se agregan en orden de nombre.',
+  dropHere: 'Suelta para agregar a la lista',
+  skippedFiles: (names: string[]) => `No agregados (tipo no admitido): ${names.join(', ')}`,
+  badgeLive: 'EN VIVO',
+  badgeNext: 'SIGUIENTE',
+  copying: (fraction: number) => `copiando ${Math.round(fraction * 100)}%`,
+  copyError: 'error',
+  typeVideo: 'Video',
+  typeImage: 'Imagen',
+  types: { video: 'Video', image: 'Imagen', slides: 'Diapositivas', bible: 'Biblia', song: 'Canto', folder: 'Carpeta', audio: 'Audio', countdown: 'Cuenta regresiva', capture: 'Captura de ventana' } as Record<ItemType, string>,
+  stanzaCount: (n: number) => (n === 1 ? '1 estrofa' : `${n} estrofas`),
+  fileCount: (n: number) => `${n} archivos`,
+  indexing: (fraction: number) => `indexando ${Math.round(fraction * 100)}%`,
+
+  // Top bar: services
+  serviceLabel: 'Servicio',
+  renameHint: 'Doble clic para cambiar el nombre',
+  renameService: 'Cambiar el nombre de este servicio',
+  newService: 'Nuevo',
+  elapsedHint: 'Tiempo desde que el primer elemento salió en vivo',
+
+  // Start screen and presets
+  startContinue: 'Continuar',
+  startPresets: 'Empezar desde un modelo',
+  startRecent: 'Servicios recientes',
+  startEmpty: 'Servicio vacío',
+  startSuggested: 'Sugerido ahora',
+  startLiveNow: 'En las pantallas ahora',
+  startLiveWarning: 'Hay algo en las pantallas. Limpia las pantallas antes de empezar o abrir otro servicio.',
+  startNoPresets: 'Todavía no hay modelos. Arma una lista y luego haz clic en "Guardar como modelo" en la barra de abajo.',
+  startScreenButton: 'Pantalla de inicio',
+  startScreenHint: 'Abrir la pantalla de inicio: continuar o empezar desde un modelo',
+  saveAsPreset: 'Guardar como modelo',
+  saveAsPresetHint: 'Guardar esta lista y este programa para usarlos otra vez',
+  presetSaveTitle: 'Guardar como modelo',
+  presetEditTitle: 'Editar modelo',
+  presetSaveHelp: (n: number) =>
+    `Guarda una copia de esta lista (${n} ${n === 1 ? 'elemento' : 'elementos'}) y los horarios de su programa. Los cambios que hagas después en este servicio no cambian el modelo.`,
+  presetName: 'Nombre',
+  presetNamePlaceholder: 'Por ejemplo: Culto entre semana',
+  presetDays: 'Días habituales',
+  presetTime: 'Hora habitual',
+  presetScheduleHelp: 'Los días y la hora se usan para sugerir este modelo cuando se abre la aplicación.',
+  presetReplaceNote: (name: string) => `Ya existe un modelo llamado "${name}". Al guardar se reemplaza con esta lista.`,
+  presetNameTaken: 'Otro modelo ya tiene este nombre.',
+  presetSave: 'Guardar',
+  presetReplace: 'Reemplazar modelo',
+  presetCancel: 'Cancelar',
+  presetDelete: 'Borrar',
+  presetDeleteConfirm: 'Haz clic otra vez para borrar',
+  presetEditHint: 'Editar nombre, días y hora',
+  presetNoSchedule: 'Sin día habitual',
+  presetItems: (n: number) => `${n} ${n === 1 ? 'elemento' : 'elementos'}`,
+  weekdays: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
+
+  // Hotkeys
+  noHotkeys: 'Sin teclas rápidas',
+  editHotkeys: 'Asigna una tecla rápida F1–F8 a los favoritos (Biblioteca › ★ Favoritos)',
+
+  // Library (SPEC 5.2)
+  libraryLabel: 'Biblioteca',
+  libraryFolders: 'Carpetas de la biblioteca',
+  favorites: 'Favoritos',
+  removeLibraryFolder: 'Quitar de la biblioteca (los archivos se quedan)',
+  addLibraryFolder: 'Agregar carpeta a la biblioteca',
+  pastServices: 'Servicios anteriores',
+  noPastServices: 'Todavía no hay servicios anteriores.',
+  itemCount: (n: number) => (n === 1 ? '1 elemento' : `${n} elementos`),
+  libraryHelp: 'Elige una carpeta de la biblioteca, ★ Favoritos o un servicio anterior.',
+  searchLibrary: 'Buscar en la biblioteca',
+  libFilters: { All: 'Todo', Video: 'Video', Slides: 'Diapositivas', Songs: 'Cantos', Images: 'Imágenes', Audio: 'Audio' } as Record<string, string>,
+  sortLabel: 'Ordenar',
+  sortName: 'Nombre',
+  sortUsed: 'Último uso',
+  sortAdded: 'Fecha de agregado',
+  addAllToOrder: 'Agregar todo a la lista',
+  libEmpty: 'No hay archivos aquí.',
+  dirHint: (n: number) => `${n} archivos · doble clic para abrir`,
+  usedText: (u?: { count: number; last: number }) => {
+    if (!u) return 'Nunca usado'
+    if (u.count > 2) return `Usado ${u.count} veces`
+    return `Usado el ${new Date(u.last).toLocaleDateString('es', { day: 'numeric', month: 'short' })}`
+  },
+  libTip: 'Doble clic o Enter agrega un archivo a la lista. También puedes arrastrar un archivo a la pestaña Lista.',
+  libSelectHint: 'Selecciona un archivo para ver sus detalles.',
+  typeLabel: 'Tipo',
+  sizeLabel: 'Tamaño',
+  addedLabel: 'Agregado',
+  lastUsedLabel: 'Último uso',
+  openInPreview: 'Abrir en la vista previa',
+  addToFavorites: 'Agregar a Favoritos',
+  inFavorites: 'En Favoritos',
+  favoritesHelp: 'Una pulsación de la tecla rápida = en vivo ahora en el destino.',
+  addAction: 'Agregar',
+  blackShort: 'Pantalla negra',
+  countdown5: 'Cuenta regresiva 5 min',
+  noHotkey: 'Sin tecla rápida',
+  reuseHelp: (name: string) =>
+    `Reusar "${name}": copia su lista a este servicio y cambia solo lo nuevo. Los elementos de carpeta conservan la carpeta; elige el archivo otra vez.`,
+  folderKept: 'carpeta: elige el archivo otra vez',
+  copyOrder: 'Copiar la lista a este servicio',
+  openThisService: 'Abrir este servicio',
+
+  // Resource folder (called "shared folder" in the code)
+  sharedLabel: 'Carpeta de recursos',
+  sharedHelp:
+    'Vigila una carpeta de esta computadora o de la red (por ejemplo \\\\MEDIA-PC\\Compartida). Los archivos nuevos se copian y se convierten al instante, para que estén listos para el servicio.',
+  sharedPathPlaceholder: '\\\\MEDIA-PC\\Compartida',
+  watch: 'Vigilar',
+  chooseFolder: 'Elegir…',
+  watching: 'Vigilando',
+  unreachable: 'No disponible',
+  changeFolder: 'Cambiar carpeta…',
+  changeFolderHint: 'Elegir otra carpeta para vigilar',
+  folderMenuHint: 'Opciones de la carpeta',
+  clearFolder: 'Quitar',
+  clearFolderHint: 'Dejar de vigilar esta carpeta. Los elementos que ya están en la lista se quedan.',
+  clearFolderConfirm: '¿Dejar de vigilar esta carpeta? Los elementos que ya están en la lista se quedan. Puedes elegir una carpeta otra vez después.',
+  markSeen: 'Marcar todo como visto',
+  collapseShared: 'Ocultar la lista de la carpeta de recursos',
+  expandShared: 'Mostrar la lista de la carpeta de recursos',
+  resizeShared: 'Arrastra hacia arriba o hacia abajo para cambiar el tamaño. Doble clic para volver al tamaño normal.',
+  newCount: (n: number) => (n === 1 ? '1 NUEVO' : `${n} NUEVOS`),
+  all: 'Todo',
+  allHint: 'Agregar todos los archivos de esta carpeta a la lista, en orden de nombre',
+  sharedDirState: (files: number, ready: boolean) => ` ${files} archivos · ${ready ? 'todo listo' : 'copiando… espera'}`,
+  sharedEmpty: 'La carpeta está vacía.',
+  sharedRetry: 'Se intenta otra vez cada 15 segundos…',
+  scanning: 'Buscando…',
+  sharedScanning: 'Revisando la carpeta. Los archivos se copian cuando esto termine.',
+  tooBig: 'Demasiados archivos',
+  sharedTooBig:
+    'Esta carpeta tiene más de 1000 imágenes, videos, PDF y otros archivos multimedia, así que no se vigila. Elige la carpeta donde el equipo pone los archivos para el servicio.',
+  inOrder: 'en la lista ✓',
+  ready: 'listo',
+  waiting: 'esperando',
+  prepareStates: { copying: 'copiando', converting: 'convirtiendo', rendering: 'creando páginas' } as Record<string, string>,
+  ago: (ms: number) => {
+    const min = Math.round(ms / 60000)
+    if (min < 1) return 'ahora'
+    if (min < 60) return `hace ${min} min`
+    const h = Math.round(min / 60)
+    return h < 24 ? `hace ${h} h` : `hace ${Math.round(h / 24)} d`
+  },
+  addFolderHint: 'Agregar una carpeta como un solo elemento con búsqueda (por ejemplo el himnario)',
+  folderSearchPlaceholder: 'Número, título o palabras del canto',
+  folderNoResults: 'No se encontraron archivos.',
+  folderChooseHint: 'Elige un archivo de la carpeta: selecciona la fila de la carpeta en la lista y busca.',
+  fromFolder: (name: string) => `de la carpeta ${name}`,
+  verseCount: (n: number) => (n === 1 ? '1 versículo' : `${n} versículos`),
+  slideCount: (n: number) => (n === 1 ? '1 diapositiva' : `${n} diapositivas`),
+  cacheStates: (item: ServiceItem): string => {
+    const pct = Math.round((item.cacheProgress ?? 0) * 100)
+    if (item.cache === 'downloading') return `descargando ${pct}%`
+    if (item.cache === 'converting' && item.youtube) return item.youtube.mode === 'audio' ? 'creando MP3…' : 'uniendo imagen y sonido…'
+    if (item.cache === 'copying') return `copiando ${pct}%`
+    if (item.cache === 'converting') return 'convirtiendo a PDF…'
+    if (item.cache === 'rendering') return `creando páginas ${pct}%`
+    if (item.cache === 'error') return 'error'
+    return ''
+  },
+
+  // Selected item
+  selectedLabel: 'Seleccionado',
+  noSelection: 'Selecciona un elemento de la lista.',
+  goLive: 'Mostrar en vivo',
+  markDone: 'Marcar como hecho',
+  markPending: 'Marcar como no hecho',
+  retryCopy: 'Copiar otra vez',
+  source: 'Origen',
+  cachedCopy: 'Copia local',
+  notReady: 'El archivo todavía se está copiando. Se puede mostrar en vivo cuando la copia esté lista.',
+
+  // Preview panel
+  previewLabel: 'Vista previa',
+  previewMuted: 'la vista previa está sin sonido',
+  localCopyOk: 'copia local ✓',
+  notes: 'Notas del elemento',
+  notesPlaceholder: 'Notas para el equipo (se mostrarán luego en la pantalla de Plataforma)',
+  autoDone: 'Marcar como hecho al terminar',
+  points: 'Inicio / fin',
+  startPoint: 'Punto de inicio',
+  endPoint: 'Punto final',
+  setStart: 'Fijar inicio',
+  setEnd: 'Fijar fin',
+  clearPoints: 'Borrar puntos',
+  cues: 'Marcas',
+  cuePlaceholder: 'Nombre de la marca, p. ej. pausa para oración',
+  addCue: 'Agregar marca en',
+  jumpPreview: 'Saltar',
+  jumpLive: 'Saltar en vivo',
+  volume: 'Volumen',
+  soundLabel: 'Sonido',
+  fade: 'Fundido de entrada / salida 1 s',
+  whenEnds: 'Al terminar',
+  endActions: {
+    next: 'Ir al siguiente elemento',
+    idle: 'Ir a la pantalla de espera',
+    black: 'Pantalla negra',
+    hold: 'Quedarse en el último cuadro',
+    loop: 'Repetir'
+  } as Record<EndAction, string>,
+  fitLabel: 'Ajuste',
+  fits: { fit: 'Ajustar', fill: 'Llenar (recortar)', blur: 'Lados difuminados' } as Record<ImageFit, string>,
+  verticalNote: 'La imagen es vertical, así que "Ajustar" agrega barras negras a los lados.',
+  autoNextLabel: 'Avance automático',
+  autoNextAfter: 'Siguiente elemento después de',
+  prevPage: 'Página anterior',
+  nextPage: 'Página siguiente',
+  pageOf: (n: number, total: number) => `página ${n} de ${total}`,
+  slidesHelp: 'Clic en una página para verla en la vista previa. Doble clic: mostrarla en vivo. Las flechas cambian la página en vivo.',
+  autoAdvanceEvery: 'Página siguiente cada',
+  loopSlides: 'Repetir (después de la última página, empezar otra vez)',
+
+  // Bible panel
+  bibleLabel: 'Biblia',
+  bibleTabHint: 'Biblia (Ctrl+2, o Ctrl+B: abrir y buscar)',
+  bibleOverlay: 'Biblia superpuesta',
+  bibleOverlayHint:
+    'El versículo aparece encima de la diapositiva o el video en vivo. Esc quita el versículo y la diapositiva vuelve a verse. Un video sigue sonando debajo del versículo. Desactivado: el versículo lo reemplaza.',
+  bibleBackToOrder: 'Volver a la Lista después del versículo',
+  bibleBackToOrderHint: 'Cuando el versículo sale de las pantallas, se abre la pestaña Lista con el elemento en vivo seleccionado.',
+  orderTabHint: 'Lista (Ctrl+1)',
+  libraryTabHint: 'Biblioteca (Ctrl+3)',
+  /** The key shown on each left tab, in tab order: Playlist, Bible, Library, Hymnal. */
+  leftTabKeys: ['Ctrl+1', 'Ctrl+2', 'Ctrl+3', 'Ctrl+4'],
+
+  // Hymnal tab
+  hymnalLabel: 'Himnario',
+  hymnalTabHint: 'Himnario (Ctrl+4, o Ctrl+H: abrir y buscar)',
+  hymnSearchPlaceholder: 'Número o título del himno',
+  hymnSearchHelp: '↑ ↓ elegir · Enter agrega a la lista · Ctrl+Enter muestra ahora',
+  hymnNoResults: 'No se encontró ningún himno.',
+  hymnCount: (n: number) => (n === 1 ? '1 himno' : `${n} himnos`),
+  hymnChoose: 'Elige un himno en la lista de la izquierda.',
+  hymnMusic: 'Música',
+  hymnAudio: { sung: 'Cantado', instrumental: 'Solo pista', none: 'Sin música' },
+  hymnAudioMissing: 'sin archivo',
+  hymnTrack: 'Archivo de música',
+  hymnSync: 'Las diapositivas cambian solas (tiempos de diapositiva)',
+  hymnSyncHint:
+    'Activado: cada diapositiva tiene su propio tiempo según la música. Las diapositivas cambian solas siguiendo la música. Si cambias una diapositiva con las flechas o el clicker, esa diapositiva empieza su tiempo otra vez y las siguientes siguen desde ahí (la música no se mueve). Doble clic en una diapositiva: la música salta a ella. Desactivado: cambia cada diapositiva a mano.',
+  hymnNoTimes: 'No se conocen los tiempos de diapositiva de este himno: cambia las diapositivas con las flechas.',
+  hymnOldNoTimes: 'El himnario antiguo no tiene tiempos de diapositiva: cambia las diapositivas con las flechas.',
+  /** Under a slide: when it starts in the music, and how long it stays. The last slide stays until the music ends. */
+  hymnSlideTime: (start: string, seconds: number | null) => (seconds === null ? `${start} → fin` : `${start} · ${seconds} s`),
+  hymnSlideTimeHint: 'Cuándo empieza esta diapositiva en la música y cuánto tiempo se queda',
+  hymnNextSlideIn: (seconds: number) => `siguiente diapositiva en ${seconds} s`,
+  hymnNextSlideHint: 'La diapositiva cambia sola en esta cantidad de segundos (tiempos de diapositiva). Las flechas la cambian ahora.',
+  hymnMusicNote: (kind: string) => `♪ ${kind}`,
+  hymnalFolder: 'Carpeta del himnario',
+  hymnalChangeFolder: 'Cambiar carpeta…',
+  hymnalOpenFolder: 'Abrir carpeta',
+  hymnalRescan: 'Leer otra vez',
+  hymnalRescanHint: 'Leer otra vez la carpeta del himnario, después de copiar archivos en ella',
+  hymnBookMark: { nuevo: '(N)', antiguo: '(A)' } as Record<'nuevo' | 'antiguo', string>,
+  /** Which hymnal the search shows. Only one is chosen. */
+  hymnScope: { nuevo: 'Nuevo (N)', antiguo: 'Antiguo (A)', both: 'Ambos' } as Record<'nuevo' | 'antiguo' | 'both', string>,
+  hymnScopeHint: 'Buscar en el himnario nuevo (N), en el antiguo (A) o en ambos',
+  hymnOldConverting: 'Creando las diapositivas desde el PowerPoint… (solo la primera vez)',
+  hymnOldError: (message: string) => `No se pudieron crear las diapositivas desde el PowerPoint: ${message}`,
+  hymnalOldFolder: 'Himnario antiguo',
+  hymnalOldNone: 'No hay carpeta elegida. Elige la carpeta con el PowerPoint y la música de cada himno.',
+  hymnalOldChoose: 'Elegir carpeta…',
+  hymnalOldHint:
+    'La carpeta del himnario antiguo: un PowerPoint (o PDF) por himno y su música, con el número del himno al inicio de cada nombre de archivo. También se leen las subcarpetas. La música en una carpeta cuyo nombre tiene "Cantado" o "Voz" es cantada; la otra música es solo pista.',
+  hymnalImport: 'Importar desde el programa antiguo…',
+  hymnalImportHint:
+    'Elige la carpeta del programa antiguo "Himnario Adventista" (Himnario NUEVA VERSION PC). Sus imágenes y su música se copian a la carpeta del himnario, con los tiempos de diapositiva. Puedes ejecutarlo otra vez en cualquier momento para reparar la carpeta del himnario: los archivos que ya están no se copian otra vez.',
+  hymnalOldProgramAsk: (target: string) =>
+    `Esta es la carpeta del programa antiguo "Himnario Adventista". ¿Importarla? Sus imágenes, su música y sus tiempos de diapositiva se copian a la carpeta del himnario (${target}), y desde entonces la aplicación lee esa carpeta.`,
+  hymnalImportNow: 'Importar',
+  hymnalUseAsIs: 'Usar esta carpeta tal como está',
+  hymnalCancel: 'Cancelar',
+  hymnalIsOldProgram: 'Esta es la carpeta del programa antiguo. Impórtala para que el himnario tenga su propia carpeta.',
+  hymnalNotOldProgram: 'Esa carpeta no es el programa antiguo "Himnario Adventista" (no tiene las carpetas Letra y Resources).',
+  hymnalImporting: (done: number, total: number) => (total ? `Importando himnos… ${done} de ${total} archivos` : 'Importando himnos…'),
+  hymnalImportDone: (copied: number, kept: number) => `Importación terminada: ${copied} archivos copiados, ${kept} ya estaban.`,
+  hymnalImportFailed: (message: string) => `La importación se detuvo: ${message}`,
+  hymnalEmpty:
+    'Todavía no hay himnos en esta carpeta. Copia en ella los archivos de los himnos: Letra (una carpeta de imágenes por himno), Musica\\Cantado y Musica\\Instrumental (un archivo de música por himno). Luego haz clic en "Leer otra vez". O elige la carpeta donde están los archivos.',
+  bibleEmptyMain: 'Primero agrega una versión de la Biblia (columna izquierda).',
+  noBible:
+    'Todavía no hay ninguna versión de la Biblia. Descarga una versión gratuita (por ejemplo Reina Valera 1909) o importa un archivo de Biblia (o suéltalo aquí): Zefania XML, OSIS XML, JSON o un archivo de texto con libro, capítulo, versículo y texto.',
+  downloadVersion: 'Descargar una versión…',
+  downloadShort: 'Descargar…',
+  downloadVersionHint: 'Descargar más versiones de la Biblia del catálogo gratuito en internet',
+  downloadVersions: 'Descargar versiones de la Biblia',
+  catalogHelp:
+    'Versiones gratuitas del catálogo de getbible.net (textos de CrossWire Bible Society). Después de la descarga, la versión funciona sin internet. Versiones como RVR1960, NVI o NTV no están aquí: necesitan una licencia; impórtalas desde un archivo.',
+  catalogSearch: 'Buscar por nombre, por ejemplo "Reina Valera"',
+  allLanguages: 'Todos los idiomas',
+  refreshCatalog: 'Obtener la lista otra vez desde internet',
+  catalogLoading: 'Cargando la lista de versiones…',
+  catalogNone: 'No se encontraron versiones.',
+  catalogOffline: (err: string) => `No se pudo cargar la lista. Revisa la conexión a internet. (${err})`,
+  catalogOldList: (err: string) => `Sin internet: esta es la lista de la última vez. (${err})`,
+  download: 'Descargar',
+  downloading: 'descargando…',
+  installed: 'Instalada ✓',
+  versionsOnThisComputer: 'Versiones en esta computadora',
+  licenseReminder:
+    'La licencia de cada versión se muestra en la lista. "Copyrighted; permission to distribute granted to CrossWire" significa que el dueño permite a CrossWire compartirla; verifica que se permite mostrarla en la iglesia.',
+  importBible: 'Importar un archivo de Biblia…',
+  importShort: 'Importar…',
+  importBibleHint: 'Importar otra versión de la Biblia desde un archivo',
+  bibleSearchPlaceholder: 'jn 3 16 · sal 23:1-4 · buen pastor',
+  addToOrder: 'Agregar a la lista',
+  showNow: 'Mostrar ahora',
+  prevChapter: 'Capítulo anterior',
+  nextChapter: 'Capítulo siguiente',
+  crumbBooks: 'Libros',
+  today: 'Hoy',
+  stepBook: 'Libro',
+  stepChapter: 'Capítulo',
+  stepVerse: 'Versículo',
+  oldTestament: 'Antiguo Testamento',
+  newTestament: 'Nuevo Testamento',
+  pickChapter: (book: string, count: number) => `${book} · elige un capítulo (${count})`,
+  pickVerse: (book: string, chapter: number) => `${book} ${chapter} · elige un versículo (Shift+clic = rango)`,
+  pickerHelp: 'Escribe un número para saltar (por ejemplo "23"). Doble clic en un versículo: mostrarlo ahora.',
+  versesOf: (book: string, chapter: number) => `Versículos · ${book} ${chapter}`,
+  searchResults: (n: number, more: boolean) =>
+    n === 0 ? 'No se encontraron versículos' : `${n}${more ? '+' : ''} ${n === 1 && !more ? 'versículo encontrado' : 'versículos encontrados'}`,
+
+  // Bible preview
+  bibleMissing: 'versión no encontrada',
+  versesToScreens: (verses: number, screens: number) => `${verses} versículos → ${screens} pantallas`,
+  splitNote: 'Este versículo es largo, así que se divide en más pantallas. "…" indica que continúa.',
+  versesPerScreen: 'Versículos por pantalla',
+  fitMany: 'Todos los que quepan',
+  splitLong: 'Dividir versículos largos',
+  reference: 'Referencia',
+  refPositions: { below: 'Debajo del texto', above: 'Encima del texto', hide: 'Ocultar' } as Record<'below' | 'above' | 'hide', string>,
+  showVersion: 'Mostrar el nombre de la versión',
+  mode: 'Modo',
+  modeFull: 'Pantalla completa',
+  modeLower: 'Tercio inferior (sobre el video)',
+  secondVersion: 'Segunda versión',
+  none: 'Ninguna',
+  songTitle: 'Título en pantalla',
+
+  // Typed text (songs, announcements)
+  addText: 'Texto',
+  typedText: 'Texto escrito',
+  addTextHint: 'Escribe un canto, un coro o un anuncio',
+  noTextYet: 'todavía sin texto',
+  editText: 'Editar texto',
+  saveText: 'Guardar texto',
+  cancel: 'Cancelar',
+  songTextPlaceholder:
+    'Escribe el texto aquí.\n\nUna línea vacía empieza una pantalla nueva.\nUn salto de línea sigue siendo un salto de línea en la pantalla.',
+  songTextHelp: 'Una línea vacía empieza una pantalla nueva. Ctrl+Enter guarda.',
+  songFileEditNote: 'Esto cambia el texto solo en este servicio, no en el archivo. Una línea vacía empieza una pantalla nueva.',
+  itemBackground: 'Fondo de este elemento',
+  useStyleBackground: 'El mismo del estilo de texto',
+  chooseFile: 'Elegir…',
+  textStyleButton: 'Estilo de texto…',
+
+  // Undo
+  undo: 'Deshacer',
+  undoHint: (kind: UndoKind) => `Deshacer: ${undoKindsEs[kind]} (Ctrl+Z)`,
+  nothingToUndo: 'Nada que deshacer',
+
+  // Text style window
+  textStyleTitle: 'Estilo de texto',
+  styleKinds: { bible: 'Biblia', song: 'Cantos y texto' } as Record<TextStyleKind, string>,
+  styleKindHelp: {
+    bible: 'Para pasajes de la Biblia y mensajes en el tercio inferior.',
+    song: 'Para cantos, himnos (.txt) y texto escrito, como anuncios.'
+  } as Record<TextStyleKind, string>,
+  styleSamples: {
+    bible: {
+      text: 'Porque de tal manera amó Dios al mundo, que ha dado á su Hijo unigénito.',
+      ref: 'Juan 3:16 · RV1909'
+    },
+    song: { text: '¡Santo! ¡Santo! ¡Santo!\nSeñor omnipotente,\nsiempre el labio mío\nloores te dará.', ref: 'Santo, Santo, Santo' }
+  } as Record<TextStyleKind, { text: string; ref: string }>,
+  styleFont: 'Letra',
+  styleFonts: { serif: 'Serif (de libro)', sans: 'Sans (limpia)' } as Record<'serif' | 'sans', string>,
+  styleSize: 'Tamaño máximo del texto',
+  styleSizeHelp: 'El texto largo se hace más pequeño, para que siempre quepa en la pantalla.',
+  styleColor: 'Color del texto',
+  styleAlign: 'Texto',
+  styleAligns: { center: 'Centrado', left: 'A la izquierda' } as Record<'center' | 'left', string>,
+  styleShadow: 'Sombra detrás de las letras',
+  styleUppercase: 'MAYÚSCULAS',
+  styleBackground: 'Fondo (pantalla completa)',
+  styleBackgrounds: { idle: 'Fondo de espera', black: 'Negro', color: 'Color', media: 'Imagen o video' } as Record<TextBackground, string>,
+  styleIdleHelp: 'La imagen o el video de la pantalla de espera del grupo (Pantallas › Grupos). Negro si el grupo no tiene.',
+  styleDim: 'Más oscuro',
+  styleLiveNote: 'Los cambios se guardan y se ven en las pantallas al instante.',
+  styleReset: 'Volver a lo predeterminado',
+  done: 'Listo',
+  licenseNote: 'Para servicios bilingües. Cada versión necesita su propia licencia o debe ser de dominio público.',
+
+  // Stage screen and tabs
+  stageNow: 'Ahora',
+  // Program of the service (parts by start time)
+  programLabel: 'Programa',
+  programEmpty: 'Todavía no hay programa. Agrega las partes del servicio con su hora de inicio, o usa la plantilla.',
+  programAdd: 'Agregar parte',
+  programStart: 'Hora de inicio',
+  programTitlePlaceholder: 'Parte, p. ej. Oración',
+  programWhoPlaceholder: 'Quién (opcional)',
+  programRemove: 'Quitar esta parte',
+  useTemplate: 'Usar plantilla',
+  useTemplateHint: 'Reemplazar este programa con la plantilla',
+  saveTemplate: 'Guardar como plantilla',
+  saveTemplateHint: 'Los servicios nuevos empiezan con este programa',
+  showProgram: 'Mostrar los horarios del programa (parte actual, tiempo restante, siguiente)',
+  programLeft: (time: string) => `quedan ${time}`,
+  programNext: 'Siguiente',
+  programStartsAt: (title: string, start: string) => `${title} empieza a las ${start}`,
+  stageNext: 'Siguiente',
+  timerLabel: 'Cuenta regresiva del participante',
+  timerNamePlaceholder: 'Sermón',
+  minutes: 'min',
+  setTime: 'Fijar',
+  start: 'Iniciar',
+  reset: 'Reiniciar',
+  stageMessagesLabel: 'Mensaje solo para la pantalla de Plataforma',
+  stageQuick: ['5 min', 'Ir terminando', 'Video listo'],
+  stageFreePlaceholder: 'Texto libre para la pantalla de Plataforma',
+  send: 'Enviar',
+  removeMessage: 'Quitar mensaje',
+  messageNow: (text: string) => `En Plataforma ahora: "${text}"`,
+  noStageGroup: 'Ningún grupo tiene la vista de plataforma. Actívala para el grupo de Plataforma en Pantallas › Grupos.',
+  lowerThirdLabel: 'Texto en pantalla (tercio inferior)',
+  line1Placeholder: 'Nombre, o el aviso',
+  line2Placeholder: 'Cargo (opcional)',
+  showOn: (target: string) => `Mostrar en ${target}`,
+  saveMessage: 'Guardar',
+  savedMessages: 'Mensajes guardados',
+  noSavedMessages: 'Todavía no hay mensajes guardados.',
+  stageViewLabel: 'Vista de plataforma',
+  stageLayoutStage: 'Plataforma',
+  stageLayoutFull: 'Pantalla completa',
+  stageLayoutHint:
+    'Plataforma: reloj, cuenta regresiva, ahora y siguiente. Pantalla completa: lo que ve la congregación en toda la pantalla, por ejemplo un video con letra. Los mensajes de plataforma se ven en ambos.',
+  stageViewHelp: 'Reloj, cuenta regresiva, ahora, siguiente, notas y mensajes para las personas en la plataforma.',
+
+  // Countdown item
+  addCountdown: 'Cuenta regresiva',
+  countdownMode: 'Contar',
+  countdownDuration: 'Duración',
+  countdownUntil: 'Hasta la hora',
+  textAbove: 'Texto arriba',
+  textAbovePlaceholder: 'El culto inicia en',
+  atZero: 'En 0:00',
+  atZeroActions: { next: 'Ir al siguiente elemento', logo: 'Mostrar el logo', stay: 'Quedarse en 0:00' } as Record<'next' | 'logo' | 'stay', string>,
+  showOnStage: 'Mostrar también en la pantalla de Plataforma',
+
+  // Quick panel and audio
+  tabAudio: 'Audio',
+  tabMessage: 'Mensaje',
+  tabStage: 'Plataforma',
+  tabOnScreen: 'Algo de esta pestaña está en una pantalla ahora',
+  noMusic: 'Sin música de fondo',
+  playingBadge: 'SONANDO',
+  duckedBadge: 'más bajo (video)',
+  playlistLine: (n: number, total: number, shuffle: boolean) => `Lista de música: ${n} de ${total}${shuffle ? ' · aleatorio' : ''}`,
+  playlistEmpty: 'Agrega archivos de música o una carpeta a la lista de música.',
+  fadeOut3: 'Bajar en 3 s',
+  playlist: 'Lista de música',
+  musicFiles: 'Archivos',
+  musicFolder: 'Carpeta',
+  shuffle: 'Aleatorio',
+  background: 'Fondo',
+  videoItems: 'Video / elementos',
+  outputLevel: 'Nivel de salida',
+  outputDevice: 'Dispositivo de salida',
+  defaultDevice: 'Predeterminado del sistema',
+  mainDevice: 'Dispositivo de salida principal',
+  autoDuck: 'Bajar la música de fondo cuando suena un video',
+  startAfterLast: 'Iniciar la música de fondo después del último elemento',
+  audioX: 'Audio ✕',
+  audioLabel: 'Audio',
+  stopMusic: 'Detener la música de fondo',
+  audioItemNote: 'Solo audio: las pantallas no cambian.',
+  waveNoAudio: 'Este archivo no tiene sonido',
+  waveAllQuiet: 'Todo el archivo está en silencio',
+  waveSoundStarts: (at: string, wait: string) => `El sonido empieza en ${at} (en ${wait})`,
+  waveSoundStartsHint: 'El inicio de este archivo está en silencio. Los parlantes están bien: el sonido llega cuando el cursor alcanza la onda.',
+  waveLength: (length: string) => `Duración ${length}`,
+
+  // Live panel
+  liveLabel: 'En vivo',
+  nothingLive: 'No hay nada en vivo. Cada grupo muestra su pantalla de espera.',
+  sendTo: 'Enviar a',
+  allScreens: 'Todas las pantallas',
+  play: 'Reproducir',
+  pause: 'Pausa',
+  back10: 'Atrás 10 segundos',
+  forward10: 'Adelante 10 segundos',
+  previousTrack: 'Pista anterior',
+  nextTrack: 'Pista siguiente',
+  clear: 'Limpiar',
+  clearAll: 'Limpiar todo',
+  clearHint: 'Quitar todo de las pantallas y detener el audio (Esc dos veces)',
+  escAgain: 'Pulsa Esc otra vez para limpiar todo',
+  stopContentHint: 'Quitar esto de sus pantallas',
+  stopTextHint: 'Quitar este texto de sus pantallas',
+  stopAudioHint: 'Detener este audio',
+  prevTextScreen: 'Versículo o pantalla de texto anterior (←)',
+  nextTextScreen: 'Versículo o pantalla de texto siguiente (→)',
+
+  // Screens column
+  screensColumn: 'Pantallas',
+  target: 'destino',
+  idleShort: 'Espera',
+  groupNoScreens: 'No hay pantallas en este grupo.',
+  newScreens: 'Pantallas nuevas: agrégalas a un grupo',
+  noOutputsTitle: 'Nada sale a una pantalla',
+  noOutputs:
+    'Todavía no hay pantallas de salida. Abre la pestaña Configuración y activa "Usar como salida" para el proyector y las otras pantallas de salida.',
+  noneConnected: 'Las pantallas de salida no están conectadas. Revisa los cables y la configuración de pantalla de Windows.',
+  openScreensTab: 'Abrir la pestaña Configuración',
+  noScreensChip: 'Sin pantalla de salida',
+
+  // Updates
+  updateDownloading: (version: string, percent: number) => `Descargando la versión ${version} (${percent}%)`,
+  updateReady: (version: string) => `La versión ${version} está lista`,
+  updateReadyHint: 'Se instala cuando cierras la aplicación. Haz clic para reiniciar e instalarla ahora.',
+  updateConfirm: (version: string) =>
+    `¿Cerrar la aplicación e instalar la versión ${version} ahora?\n\nLas pantallas de salida se apagan hasta que la aplicación se abra otra vez (unos 30 segundos). No lo hagas durante un servicio.`,
+  versionLabel: (version: string) => `Versión ${version}`,
+
+  // Actions that would stop what is on the screens
+  liveBlocked: (action: string) =>
+    `No se puede ${action} ahora.\n\nHay algo en las pantallas (o suena un audio) y esto lo detendría.\nPrimero haz clic en "Limpiar todo" (o pulsa Esc dos veces) y luego inténtalo otra vez.`,
+  liveBlockedNew: 'empezar un servicio nuevo',
+  liveBlockedOpen: 'abrir otro servicio',
+  liveBlockedPreset: 'empezar un servicio desde un modelo',
+  liveBlockedUpdate: 'reiniciar para instalar la actualización',
+  liveBlockedRemove: 'quitar este elemento: está en las pantallas',
+  liveBlockedUndo: 'deshacer: se quitaría el elemento que está en las pantallas',
+  closeWhileLive: 'Hay algo en las pantallas ahora. Si cierras Media Console, se quita de las pantallas.\n\n¿Cerrar de todos modos?',
+  connected: 'conectada',
+  notConnected: 'no conectada',
+  audioHere: 'sonido',
+
+  // Top bar
+  logo: 'Logo',
+  noLogoHint: 'Primero elige un logo en Pantallas › Logo de la iglesia',
+  blackAll: 'Pantalla negra (todas)',
+  clearText: 'Quitar texto',
+  clearTextShort: 'Quitar texto',
+  textX: 'Texto ✕',
+  blackOn: 'Negro ACTIVADO — clic para mostrar',
+  hideScreens: 'Ocultar pantallas',
+  hideScreensHint:
+    'Quitar esta aplicación de las pantallas de salida, para que muestren el escritorio de Windows (Zoom, un navegador, otro programa). Los elementos siguen en vivo y el sonido sigue sonando. Haz clic otra vez para mostrar las pantallas.',
+  screensHiddenOn: 'Pantallas OCULTAS — clic para mostrar',
+  screensHiddenHint: 'Las pantallas de salida muestran ahora el escritorio de Windows, no esta aplicación. Haz clic para volver a poner esta aplicación en las pantallas.',
+
+  // Groups editor
+  groupsLabel: 'Grupos',
+  groupsHelp: 'Elige el grupo de cada pantalla arriba. Las pantallas del mismo grupo muestran lo mismo.',
+  logoLabel: 'Logo de la iglesia',
+  noLogo: 'No hay logo elegido',
+  logoHelp: 'Un logo para todas las pantallas. Lo usa el botón Logo de arriba, y también los grupos que muestran el logo cuando no hay nada en vivo.',
+  chooseLogo: 'Elegir logo',
+  addToGroup: 'Agregar a un grupo…',
+  defaultGroupName: (n: number) => `Grupo ${n}`,
+  addGroup: 'Agregar grupo',
+  removeGroup: 'Quitar grupo',
+  groupScreens: 'Pantallas',
+  groupShows: 'Muestra',
+  showsService: 'Servicio',
+  groupNoScreensPick: 'Todavía ninguna. Elige este grupo en una tarjeta de pantalla arriba.',
+  idleLabel: 'Cuando no hay nada en vivo',
+  idleKinds: { black: 'Negro', logo: 'Logo', background: 'Fondo', loop: 'Ciclo' } as Record<IdleKind, string>,
+  idleFiles: 'Archivos',
+  chooseFiles: 'Elegir archivos',
+  changeFiles: 'Cambiar',
+  clearFiles: 'Quitar',
+  idleInterval: 'Segundos por imagen',
+  idleNeedsLogo: 'Elige un logo de la iglesia abajo, o la pantalla queda negra.',
+  idleNeedsFiles: 'Elige archivos, o la pantalla queda negra.',
+
+  // Setup page: presenter clicker
+  clickerLabel: 'Clicker de presentación',
+  clickerHelp:
+    'Empareja el clicker para que sus botones cambien diapositivas y versículos incluso cuando otro programa (por ejemplo Chrome) está al frente. Solo el clicker hace esto: el teclado sigue funcionando normal. Cuando Media Console está al frente, el clicker funciona como antes.',
+  clickerPair: 'Emparejar clicker',
+  clickerPairAgain: 'Emparejar otra vez',
+  clickerForget: 'Olvidar',
+  clickerCancel: 'Cancelar',
+  clickerPressNow: 'Pulsa ahora el botón Siguiente del clicker…',
+  clickerBackground: 'Funciona cuando otro programa está al frente',
+  clickerBlock: 'No pasar las teclas del clicker a otros programas (nuevo, pruébalo primero)',
+  clickerBlockHelp:
+    'Activado: el programa al frente (por ejemplo Chrome o Zoom) no recibe las teclas del clicker, así que no se desplaza ni escribe. Las teclas son las flechas, Re Pág, Av Pág, B y punto. Las mismas teclas del teclado siguen llegando a ese programa. No funciona en programas que se ejecutan como administrador. Pruébalo antes de un servicio; si el clicker o el teclado actúan mal, desactívalo.',
+  clickerBlockError: (message: string) =>
+    `No se pueden apartar las teclas del clicker de otros programas en esta computadora: ${message} Desactiva y activa el interruptor para intentarlo otra vez.`,
+  clickerLastPress: 'Último botón',
+  clickerNoPress: 'Pulsa un botón del clicker para probarlo.',
+  clickerActions: { next: 'Siguiente', previous: 'Anterior', black: 'Pantalla negra', other: 'Un botón que la aplicación no usa' } as Record<
+    ClickerAction | 'other',
+    string
+  >,
+  clickerTestHelp:
+    'Prueba: pulsa una flecha en el teclado. Si "Último botón" cambia, el teclado y el clicker usan el mismo receptor y no se pueden distinguir. En ese caso usa un clicker con su propio receptor.',
+  clickerWindowsOnly: 'El clicker en segundo plano solo funciona en Windows.',
+  clickerError: (message: string) => `El clicker en segundo plano no funciona en esta computadora: ${message}`,
+
+  // Setup page: remote control
+  remoteLabel: 'Control remoto',
+  remoteHelp:
+    'Controla el servicio desde un teléfono, una tableta u otra computadora en la misma red. Abre la dirección de abajo en su navegador y escribe el PIN.',
+  remoteOn: 'Permitir el control remoto',
+  remotePin: 'PIN',
+  remotePinHelp: 'De 4 a 8 dígitos. Pulsa Enter para guardar. Un PIN nuevo desconecta todos los controles remotos.',
+  remotePort: 'Puerto',
+  remoteAddresses: 'Abrir en el dispositivo remoto',
+  remoteNoAddress: 'Esta computadora no está conectada a una red.',
+  remoteClients: (n: number) => (n === 0 ? 'Ningún control remoto conectado' : n === 1 ? '1 control remoto conectado' : `${n} controles remotos conectados`),
+  remotePortInUse: (port: number) => `El puerto ${port} lo usa otro programa. Elige otro puerto.`,
+  remoteError: (message: string) => `No se pudo iniciar el control remoto: ${message}`,
+  remoteFirewall: 'La primera vez, Windows pide permitir esta aplicación en el firewall. Elige "Redes privadas".',
+
+  // Remote page (phone or other computer)
+  rTitle: 'Media Console Remote',
+  rPinPrompt: 'Escribe el PIN que se muestra en Media Console (pestaña Configuración).',
+  rSignIn: 'Conectar',
+  rWrongPin: 'PIN incorrecto.',
+  rWait: (s: number) => `Demasiados PIN incorrectos. Espera ${s} segundos.`,
+  rNoConnection: 'No se puede llegar a la aplicación. Revisa la red Wi-Fi.',
+  rConnected: 'Conectado',
+  rReconnecting: 'Reconectando…',
+  rNext: 'Siguiente',
+  rPrevious: 'Anterior',
+  rNextItem: (title: string) => `Siguiente: ${title}`,
+  rEndOfOrder: 'Siguiente: fin de la lista',
+  rTarget: 'Mostrar en',
+  rTargetAll: 'Todos los grupos',
+  rPage: (n: number, count: number) => `${n} / ${count}`,
+  rPrevPage: 'Página anterior',
+  rNextPage: 'Página siguiente',
+  rIdle: 'Pantalla de espera',
+  rClear: 'Limpiar',
+  rPlay: 'Reproducir',
+  rPause: 'Pausa',
+  rBack10: '−10 s',
+  rOrder: 'Lista',
+  rEmptyOrder: 'La lista está vacía.',
+  rNotReady: 'no está listo',
+  rGoLive: 'En vivo',
+  rBlack: 'Negro',
+  rBlackOn: 'Negro ACTIVADO',
+  rLogo: 'Logo',
+  rClearText: 'Quitar texto',
+  rMusic: 'Música',
+  rNoMusic: 'Sin música de fondo',
+  rMusicNext: 'Pista siguiente',
+  rFadeOut: 'Bajar',
+  rAudioItem: (title: string) => `Audio: ${title}`,
+  // Language setting (Setup page)
+  languageLabel: 'Idioma',
+  languageHelp: 'El idioma de los botones y mensajes de la aplicación. Los himnos y la Biblia no cambian.'
+}
+
+/** The names in the language picker, each in its own language. */
+export const languageNames: Record<Language, string> = { es: 'Español', en: 'English' }
+
+/**
+ * The text of the chosen language. setLanguage() changes this object in place,
+ * so code that reads strings.x gets the new text at its next render.
+ */
+export const strings: typeof en = { ...es }
+
+export function setLanguage(language: Language): void {
+  Object.assign(strings, language === 'en' ? en : es)
 }
 
 export function formatTime(seconds: number | undefined): string {

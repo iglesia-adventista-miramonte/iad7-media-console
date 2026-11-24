@@ -39,6 +39,7 @@ import { bibleOptions, shownStyle } from './textStyles'
 import { prepareFile } from './prepare'
 import { saveService } from './serviceStore'
 import * as youtube from './youtube'
+import { mainStrings } from './strings'
 
 // The service order and the live state of each group. The main process owns
 // this state; windows only show it and send commands.
@@ -908,7 +909,7 @@ export function addCountdown(): void {
   service.items.push({
     id: randomUUID(),
     type: 'countdown',
-    title: 'Countdown',
+    title: mainStrings.newCountdown,
     path: '',
     cache: 'ready',
     status: 'pending',
@@ -1077,7 +1078,7 @@ function applyHymn(item: ServiceItem): void {
     item.pageUrls = []
     item.url = undefined
     item.cache = 'error'
-    item.cacheError = `Hymn ${item.hymn.number}${item.hymn.book === 'antiguo' ? ' (A)' : ''} is not in the hymnal folder.`
+    item.cacheError = mainStrings.hymnMissing(item.hymn.number, item.hymn.book === 'antiguo')
     return
   }
   // An old hymn: its PowerPoint becomes pictures first (the hymnal tells when they are ready).
@@ -1420,7 +1421,7 @@ export function newTextItem(): string {
   const item: ServiceItem = {
     id: randomUUID(),
     type: 'song',
-    title: 'New text',
+    title: mainStrings.newText,
     path: '',
     cache: 'ready',
     status: 'pending',

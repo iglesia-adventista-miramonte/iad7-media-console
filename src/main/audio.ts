@@ -152,7 +152,8 @@ export function audioState(): AudioState {
           time: item.time,
           duration: item.duration,
           volume: item.volume,
-          nextSlideIn: nextSlideIn(item.itemId)
+          nextSlideIn: nextSlideIn(item.itemId),
+          url: item.url
         }
       : null,
     levels: { l, r }

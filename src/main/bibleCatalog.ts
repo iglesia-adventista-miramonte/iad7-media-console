@@ -3,6 +3,7 @@ import { createWriteStream, existsSync, mkdirSync, readFileSync, rmSync, writeFi
 import { join } from 'node:path'
 import type { BibleCatalogEntry } from '../shared/types'
 import { importBible, listBibles } from './bible'
+import { mainStrings } from './strings'
 
 /**
  * Bible versions to download inside the app, from the free getbible.net
@@ -83,7 +84,7 @@ export async function bibleCatalog(refresh = false): Promise<{ entries: BibleCat
   if (saved && !refresh && Date.now() - saved.at < catalogMaxAge) return { entries: toEntries(saved.data) }
   try {
     const res = await net.fetch(catalogUrl)
-    if (!res.ok) throw new Error(`The server answered ${res.status}`)
+    if (!res.ok) throw new Error(mainStrings.serverAnswered(res.status))
     const data = (await res.json()) as Record<string, RawEntry>
     writeFileSync(cacheFile(), JSON.stringify({ at: Date.now(), data }), 'utf8')
     return { entries: toEntries(data) }
@@ -97,13 +98,13 @@ export async function bibleCatalog(refresh = false): Promise<{ entries: BibleCat
 
 /** Download one version, then import it like a file. Progress is 0..1 (or -1 when the size is not known). */
 export async function downloadBible(catalogId: string, onProgress: (fraction: number) => void): Promise<void> {
-  if (!/^[a-z0-9_-]+$/i.test(catalogId)) throw new Error('Unknown version')
+  if (!/^[a-z0-9_-]+$/i.test(catalogId)) throw new Error(mainStrings.unknownVersion)
   const { entries } = await bibleCatalog()
   const entry = entries.find((e) => e.id === catalogId)
-  if (!entry) throw new Error('This version is not in the catalog')
+  if (!entry) throw new Error(mainStrings.notInCatalog)
 
   const res = await net.fetch(versionUrl(catalogId))
-  if (!res.ok || !res.body) throw new Error(`The server answered ${res.status}`)
+  if (!res.ok || !res.body) throw new Error(mainStrings.serverAnswered(res.status))
   const total = Number(res.headers.get('content-length')) || 0
   const tmp = join(dir(), `download-${catalogId}.json`)
   const file = createWriteStream(tmp)

@@ -9,6 +9,7 @@ import { CapturePreview } from './CaptureItem'
 import { useHymnalState } from './hooks'
 import { hymnKey, HymnMusicOptions, playableAudio, SlideTime } from './HymnalView'
 import { MediaButton } from './MediaIcons'
+import { useWaveform, WaveNote, WaveTrack } from './Waveform'
 
 const api = window.mediaConsole
 
@@ -155,6 +156,7 @@ function ItemPreview({ state, item }: { state: ServiceState; item: ServiceItem }
           set={set}
         />
       )}
+      {item.type === 'audio' && ready && <AudioWave item={item} />}
       {item.type === 'image' && <ImageOptions item={item} set={set} />}
       {item.hymn && ready && <HymnOptions item={item} set={set} />}
       {item.type === 'slides' && ready && (
@@ -275,6 +277,22 @@ function NotesInput({ item }: { item: ServiceItem }) {
   )
 }
 
+// ---- Audio ----
+
+/** An audio item: its waveform, so a quiet start (or no sound) shows before it goes live. The preview does not play sound. */
+function AudioWave({ item }: { item: ServiceItem }) {
+  const wave = useWaveform(item.url)
+  const duration = item.duration || (wave ? wave.peaks.length * wave.step : 0)
+  return (
+    <div className="video-controls audio-wave">
+      <span className="mono">{formatTime(0)}</span>
+      <WaveTrack wave={wave} duration={duration} time={0} accent="preview" />
+      <span className="mono dim">{formatTime(duration || undefined)}</span>
+      <WaveNote wave={wave} time={0} />
+    </div>
+  )
+}
+
 // ---- Video ----
 
 function VideoOptions(props: {
@@ -293,6 +311,7 @@ function VideoOptions(props: {
   const [cueLabel, setCueLabel] = useState('')
   const pct = (t: number) => `${duration ? (t / duration) * 100 : 0}%`
   const cues = s.cues ?? []
+  const wave = useWaveform(item.url)
 
   return (
     <div className="video-options">
@@ -301,9 +320,9 @@ function VideoOptions(props: {
         <MediaButton icon="back10" label={strings.back10} quiet onClick={() => onJump(now - 10)} />
         <MediaButton icon="forward10" label={strings.forward10} quiet onClick={() => onJump(now + 10)} />
         <span className="mono">{formatTime(now)}</span>
-        <div className="timebar-wrap">
+        <WaveTrack wave={wave} duration={duration} time={now} accent="preview" className="timebar-wrap">
           <input
-            className="timebar timebar-preview"
+            className="timebar timebar-preview wave-input"
             type="range"
             min={0}
             max={duration || 1}
@@ -316,8 +335,9 @@ function VideoOptions(props: {
           {cues.map((c) => (
             <span key={c.time} className="marker marker-cue" style={{ left: pct(c.time) }} title={c.label} />
           ))}
-        </div>
+        </WaveTrack>
         <span className="mono dim">{formatTime(duration || undefined)}</span>
+        <WaveNote wave={wave} time={now} />
         <span className="tool-sep" />
         <button className="btn btn-small" title={strings.points} onClick={() => set({ start: now })}>
           {strings.setStart} {s.start ? formatTime(s.start) : ''}

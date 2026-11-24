@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import type { GroupConfig, ProgramPart, SavedMessage, Settings, StageRender, StageTimer } from '../shared/types'
 import { saveSettings } from './settings'
 import * as svc from './service'
+import { mainStrings } from './strings'
 
 /**
  * The Stage screen (SPEC 7): the participant countdown, messages only for
@@ -112,7 +113,7 @@ export function stageRender(group: GroupConfig, groups: GroupConfig[]): StageRen
   return {
     full: !!group.stageFull,
     timer,
-    countdown: countdown ? { label: countdown.settings.textAbove || info.countdownTitle || 'Countdown', endsAt: countdown.endsAt! } : null,
+    countdown: countdown ? { label: countdown.settings.textAbove || info.countdownTitle || mainStrings.newCountdown, endsAt: countdown.endsAt! } : null,
     message,
     now: info.now,
     next: info.next,

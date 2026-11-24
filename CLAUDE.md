@@ -32,5 +32,12 @@ output to several screens (projector, participant monitor).
   it work before the next step.
 - Write docs, comments meant for people, and explanations in plain, literal
   English (simple words, no metaphors). Code and identifiers are normal.
-- UI text: English labels for now; content (hymns, Bible) is Spanish. Keep all
-  UI strings in one place so they can be translated later.
+- UI text is in Spanish (default) and English; the operator picks the language
+  on the Setup page. The app name "Media Console" stays in English. Content
+  (hymns, Bible) is Spanish. Keep all UI strings in one place, with both
+  languages: `src/renderer/src/strings.ts` for the windows,
+  `src/main/strings.ts` for text from the main process (file dialogs, default
+  names, error messages). A new string needs its English and Spanish text (the
+  Spanish dictionary is typed as `typeof en`, so a missing key does not compile).
+  Read `strings.x` at render time, not in module-level constants, so a language
+  change shows at once.

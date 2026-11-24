@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { isAbsolute } from 'node:path'
 import appIcon from '../../build/icon.png?asset'
 import type {
+  Language,
   LiveBlock,
   BibleOptions,
   BibleRef,
@@ -71,6 +72,8 @@ import {
   openTestWindow,
   syncTestWindows
 } from './testWindows'
+import { mainStrings, setMainLanguage } from './strings'
+import { waveform } from './waveform'
 
 // The main process holds the state. Windows only show what we send them.
 let settings: Settings
@@ -258,7 +261,7 @@ async function pickPaths(options: { multi: boolean; extensions: string[]; name: 
     properties: options.multi ? ['openFile', 'multiSelections'] : ['openFile'],
     filters: [
       { name: options.name, extensions: options.extensions },
-      { name: 'All files', extensions: ['*'] }
+      { name: mainStrings.filterAllFiles, extensions: ['*'] }
     ]
   })
   return result.canceled ? [] : result.filePaths
@@ -319,12 +322,12 @@ function registerIpc(): void {
     groups.assignOutput(outputId, groupId)
   )
   ipcMain.handle('groups:pickIdle', async (_e, id: string) => {
-    const paths = await pickPaths({ multi: true, extensions: mediaExtensions, name: 'Video and images' })
+    const paths = await pickPaths({ multi: true, extensions: mediaExtensions, name: mainStrings.filterMedia })
     if (paths.length) groups.setIdleMedia(id, paths)
   })
   ipcMain.handle('groups:clearIdle', (_e, id: string) => groups.setIdleMedia(id, []))
   ipcMain.handle('groups:pickLogo', async () => {
-    const [path] = await pickPaths({ multi: false, extensions: imageExtensions, name: 'Images' })
+    const [path] = await pickPaths({ multi: false, extensions: imageExtensions, name: mainStrings.filterImages })
     if (path) groups.setLogo(path)
   })
 
@@ -428,7 +431,7 @@ function registerIpc(): void {
   ipcMain.handle('message:save', (_e, line1: string, line2: string) => stage.saveMessage(line1, line2))
   ipcMain.handle('message:delete', (_e, id: string) => stage.deleteMessage(id))
   ipcMain.handle('service:pickFiles', async () => {
-    const paths = await pickPaths({ multi: true, extensions: orderExtensions, name: 'Video, images and slides' })
+    const paths = await pickPaths({ multi: true, extensions: orderExtensions, name: mainStrings.filterOrder })
     return paths.length ? svc.addFiles(paths) : { added: 0, skipped: [] }
   })
   ipcMain.handle('service:addFiles', (_e, paths: string[]) => svc.addFiles(paths))
@@ -454,7 +457,7 @@ function registerIpc(): void {
   ipcMain.handle('service:newTextItem', () => svc.newTextItem())
   ipcMain.handle('service:undo', () => svc.undo())
   ipcMain.handle('service:pickItemBackground', async (_e, id: string) => {
-    const [path] = await pickPaths({ multi: false, extensions: mediaExtensions, name: 'Video and images' })
+    const [path] = await pickPaths({ multi: false, extensions: mediaExtensions, name: mainStrings.filterMedia })
     const ref = path ? groups.mediaRef(path) : null
     if (ref && ref.type !== 'audio') svc.updateItem(id, { settings: { background: ref } })
   })
@@ -465,7 +468,7 @@ function registerIpc(): void {
     textStyles.setTextStyle(kind, rest)
   })
   ipcMain.handle('textStyles:pickBackground', async (_e, kind: TextStyleKind) => {
-    const [path] = await pickPaths({ multi: false, extensions: mediaExtensions, name: 'Video and images' })
+    const [path] = await pickPaths({ multi: false, extensions: mediaExtensions, name: mainStrings.filterMedia })
     if (path) textStyles.setTextBackground(kind, path)
   })
   ipcMain.handle('textStyles:reset', (_e, kind: TextStyleKind) => textStyles.resetTextStyle(kind))
@@ -502,7 +505,7 @@ function registerIpc(): void {
     if (!controlWindow) return
     const result = await dialog.showOpenDialog(controlWindow, {
       properties: folder ? ['openDirectory'] : ['openFile', 'multiSelections'],
-      filters: folder ? undefined : [{ name: 'Music', extensions: ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'oga', 'opus', 'flac'] }]
+      filters: folder ? undefined : [{ name: mainStrings.filterMusic, extensions: ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'oga', 'opus', 'flac'] }]
     })
     if (!result.canceled) await audio.addMusic(result.filePaths)
   })
@@ -546,7 +549,7 @@ function registerIpc(): void {
     }
   }
   ipcMain.handle('bible:import', async () => {
-    const [path] = await pickPaths({ multi: false, extensions: ['xml', 'json', 'txt', 'csv', 'tsv'], name: 'Bible files' })
+    const [path] = await pickPaths({ multi: false, extensions: ['xml', 'json', 'txt', 'csv', 'tsv'], name: mainStrings.filterBible })
     return path ? importBibleFile(path) : null
   })
   ipcMain.handle('bible:importFrom', (_e, path: string) => importBibleFile(path))
@@ -632,6 +635,16 @@ function registerIpc(): void {
     installUpdateNow()
     return null
   })
+  // The operator picked another language: save it and tell every window (also the output screens, without a reload).
+  ipcMain.handle('language:set', (_e, language: Language) => {
+    if (language !== 'es' && language !== 'en') return
+    settings.language = language
+    saveSettings(settings)
+    setMainLanguage(language)
+    for (const w of BrowserWindow.getAllWindows()) if (!w.isDestroyed()) w.webContents.send('language:changed', language)
+    remote.remoteStateChanged()
+  })
+  ipcMain.handle('media:waveform', (_e, url: string) => waveform(url))
   ipcMain.handle('app:quit', () => {
     quitting = true
     app.quit()
@@ -770,6 +783,11 @@ if (!app.requestSingleInstanceLock()) {
     handleMediaScheme()
     allowAudioDevices()
     settings = loadSettings()
+    setMainLanguage(settings.language ?? 'es')
+    // Each window reads the language when its page loads (before any window opens).
+    ipcMain.on('language:get', (e) => {
+      e.returnValue = settings.language ?? 'es'
+    })
     // Connect all modules first: opening the service starts copies, and their
     // progress already updates the screens (which read audio and stage state).
     groups.connectGroups(settings, setupChanged)
@@ -822,7 +840,7 @@ if (!app.requestSingleInstanceLock()) {
     if (controlWindow) clicker.startClicker(controlWindow)
     syncOutputs()
     remote.connectRemote(settings, {
-      state: () => remote.buildRemoteState(svc.serviceState(), audio.audioState(), svc.findItem, svc.isReady),
+      state: () => remote.buildRemoteState(svc.serviceState(), audio.audioState(), svc.findItem, svc.isReady, settings.language ?? 'es'),
       run: runRemoteCommand,
       onStatus: (status) => controlWindow?.webContents.send('remote:changed', status)
     })

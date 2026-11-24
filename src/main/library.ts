@@ -7,6 +7,7 @@ import { normalize } from '../shared/bibleBooks'
 import type { Favorite, LibEntry, LibraryFolder, Settings } from '../shared/types'
 import { byFileName, itemType } from './fileTypes'
 import { saveSettings } from './settings'
+import { mainStrings } from './strings'
 
 /**
  * The Library tab (SPEC 5.2): root folders, browsing, search, and when each
@@ -32,9 +33,9 @@ export function connectLibrary(s: Settings, onChange: () => void): void {
   // First run: Logo on F1 and "Black screen" on F8, as in the mockup.
   if (!settings.favorites) {
     settings.favorites = [
-      { id: randomUUID(), kind: 'logo', title: 'Logo', hotkey: 1 },
-      { id: randomUUID(), kind: 'countdown', title: 'Countdown 5 min', seconds: 300, hotkey: 4 },
-      { id: randomUUID(), kind: 'black', title: 'Black screen', hotkey: 8 }
+      { id: randomUUID(), kind: 'logo', title: mainStrings.favoriteLogo, hotkey: 1 },
+      { id: randomUUID(), kind: 'countdown', title: mainStrings.favoriteCountdown, seconds: 300, hotkey: 4 },
+      { id: randomUUID(), kind: 'black', title: mainStrings.favoriteBlack, hotkey: 8 }
     ]
     saveSettings(settings)
   }
