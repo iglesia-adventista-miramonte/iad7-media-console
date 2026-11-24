@@ -1,5 +1,11 @@
 # Changes
 
+## 2.2.0 – 2026-11-23
+
+- The app is now in Spanish. On the Setup tab, "Idioma / Language" switches between Español and English. The change shows at once on every screen, also on the output screens and the phone remote, and a video that is live keeps playing. Hymns and the Bible do not change.
+- Nothing stops the live screens by accident. While something is on a screen (or an audio item plays), "+ New", opening another service, starting a preset and "Restart now" for an update are not done: a message says to click "Clear all" first. The same for removing the live item, or an Undo that would remove it. Closing the app while something is live asks first.
+- Waveforms: the time bars of a video or audio item, in the preview and in the Live panel, show the sound of the file. A note says when the sound starts later in the file ("Sound starts at 0:42"), so a quiet start is not taken for a speaker problem. It also says when a video has no sound at all. Audio items now show their waveform in the preview.
+
 ## 2.1.0 – 2026-11-15
 
 - New "Window capture…" in the Add menu of the playlist: show a window of another program on the screens, live. For example Brave, when the preacher wants to show a web page or a YouTube video that is not downloaded (Brave blocks the ads). "Cut off edges" hides the tabs and the address bar. The sound plays from that program. Keep the window open and not minimized.
