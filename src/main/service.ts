@@ -14,6 +14,7 @@ import type {
   HymnAudio,
   HymnBook,
   HymnChoice,
+  LiveBlock,
   ItemSettings,
   ItemStatus,
   ItemType,
@@ -489,13 +490,16 @@ export function addCapture(source: { id: string; name: string }): string {
   return item.id
 }
 
-export function removeItem(itemId: string): void {
-  if (orderIndex(itemId) < 0) return
+export function removeItem(itemId: string): LiveBlock {
+  if (orderIndex(itemId) < 0) return null
+  // The item on the screens stays: removing it would take it off the screens.
+  if (showsNow(itemId)) return 'live'
   saveUndo('remove')
   clearGroups(groupsShowing(itemId), false, 'both')
   service.items = service.items.filter((i) => i.id !== itemId)
   stopRemovedDownloads()
   changed()
+  return null
 }
 
 /** Mark every done item as not done again. The live item stays live. */
@@ -914,6 +918,24 @@ export function addCountdown(): void {
 }
 
 // ---- Services ----
+
+/**
+ * Something is on the screens now (a picture, video, slide, text or countdown
+ * in any group), or an audio item of the order plays. Actions that would stop
+ * it (a new service, opening another service, an update restart) are not done.
+ * Black and the logo do not count: they are not stopped by those actions.
+ */
+export function isLive(): boolean {
+  for (const g of live.values()) if (g.content || g.text) return true
+  return audioLayer !== null
+}
+
+/** The item (or the chosen file of this folder item) is on the screens, or plays as audio. */
+function showsNow(itemId: string): boolean {
+  const item = service.items.find((i) => i.id === itemId)
+  const ids = [itemId, item?.child?.id].filter(Boolean)
+  return ids.some((id) => groupsShowing(id!).length > 0 || audioLayer?.itemId === id)
+}
 
 /** Stop everything that is live (when the service changes). Screens show their idle screen. */
 function clearAllLive(): void {
@@ -1418,15 +1440,18 @@ function saveUndo(kind: UndoKind): void {
 }
 
 /** Take back the last add, remove, move or copy. Items that leave the order also go off the screens. */
-export function undo(): void {
-  const last = undoStack.pop()
-  if (!last) return
+export function undo(): LiveBlock {
+  const last = undoStack.at(-1)
+  if (!last) return null
   const keep = new Set(last.items.map((i) => i.id))
-  for (const item of service.items) if (!keep.has(item.id)) clearGroups(groupsShowing(item.id), false, 'both')
+  // The item on the screens stays: an undo that takes it out of the order is not done.
+  if (service.items.some((i) => !keep.has(i.id) && showsNow(i.id))) return 'live'
+  undoStack.pop()
   service.items = last.items
   stopRemovedDownloads()
   resumeDownloads()
   changed()
+  return null
 }
 
 /** One screen per stanza. */

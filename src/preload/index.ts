@@ -139,6 +139,8 @@ const api: MediaConsoleApi = {
   getUpdate: () => invoke('update:get'),
   onUpdateChanged: (cb) => listen<UpdateStatus>('update:changed', cb),
   installUpdate: () => invoke('update:install'),
+  onCloseBlocked: (cb) => listen<void>('app:closeBlocked', cb),
+  quitApp: () => invoke('app:quit'),
 
   // Live
   setTarget: (target) => invoke('live:target', target),

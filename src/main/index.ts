@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { isAbsolute } from 'node:path'
 import appIcon from '../../build/icon.png?asset'
 import type {
+  LiveBlock,
   BibleOptions,
   BibleRef,
   ClickerAction,
@@ -76,6 +77,8 @@ let settings: Settings
 let controlWindow: BrowserWindow | null = null
 /** The Service page is shown, so the control window handles the clicker keys itself when it is in front. */
 let liveKeysActive = false
+/** The app is closing on purpose: the control window closes without asking. */
+let quitting = false
 
 const mediaExtensions = ['mp4', 'm4v', 'mov', 'webm', 'mkv', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp']
 const orderExtensions = [...mediaExtensions, 'pdf', 'pptx', 'ppt', 'ppsx', 'pps', 'odp', 'txt']
@@ -232,6 +235,16 @@ function createControlWindow(): void {
   controlWindow.on('maximize', moved)
   controlWindow.on('show', moved)
   // Closing the control window ends the app, and with it all screen windows.
+  // While something is live, the window asks the operator first (it calls app:quit on yes).
+  controlWindow.on('close', (event) => {
+    if (quitting || !svc.isLive()) return
+    event.preventDefault()
+    controlWindow?.webContents.send('app:closeBlocked')
+  })
+  // Windows shuts down or the user signs out: close without asking.
+  controlWindow.on('session-end', () => {
+    quitting = true
+  })
   controlWindow.on('closed', () => {
     controlWindow = null
     app.quit()
@@ -351,17 +364,28 @@ function registerIpc(): void {
   })
 
   // ---- Services ----
-  ipcMain.handle('services:new', () => openService(withUniqueName(createService(stage.programTemplate()))))
-  ipcMain.handle('presets:start', (_e, id: string) => {
+  // New, open and start-preset replace the service, and that takes everything off
+  // the screens. While something is live they do nothing and return 'live'.
+  ipcMain.handle('services:new', (): LiveBlock => {
+    if (svc.isLive()) return 'live'
+    openService(withUniqueName(createService(stage.programTemplate())))
+    return null
+  })
+  ipcMain.handle('presets:start', (_e, id: string): LiveBlock => {
+    if (svc.isLive()) return 'live'
     const s = presets.serviceFromPreset(id)
     if (s) openService(withUniqueName(s))
+    return null
   })
   ipcMain.handle('presets:save', (_e, info: PresetInfo) => presets.saveAsPreset(info))
   ipcMain.handle('presets:update', (_e, id: string, info: PresetInfo) => presets.updatePreset(id, info))
   ipcMain.handle('presets:delete', (_e, id: string) => presets.deletePreset(id))
-  ipcMain.handle('services:open', (_e, id: string) => {
+  ipcMain.handle('services:open', (_e, id: string): LiveBlock => {
+    if (id === svc.currentServiceId()) return null
+    if (svc.isLive()) return 'live'
     const s = loadService(id)
-    if (s && id !== svc.currentServiceId()) openService(s)
+    if (s) openService(s)
+    return null
   })
   ipcMain.handle('services:rename', (_e, name: string) => svc.renameService(name))
   ipcMain.handle('program:set', (_e, parts: ProgramPart[]) => svc.setProgram(parts))
@@ -602,7 +626,16 @@ function registerIpc(): void {
   ipcMain.handle('remote:get', () => remote.remoteStatus())
   ipcMain.handle('remote:update', (_e, change: Partial<RemoteSettings>) => remote.updateRemote(change))
   ipcMain.handle('update:get', () => updateStatus())
-  ipcMain.handle('update:install', () => installUpdateNow())
+  // The restart closes the screens: not while something is live.
+  ipcMain.handle('update:install', (): LiveBlock => {
+    if (svc.isLive()) return 'live'
+    installUpdateNow()
+    return null
+  })
+  ipcMain.handle('app:quit', () => {
+    quitting = true
+    app.quit()
+  })
 
   ipcMain.on('output:playback', (_e, info: PlaybackInfo & { ended: boolean }) => svc.reportPlayback(info))
   ipcMain.on('output:ready', (e) => outputPageReady(e.sender))
@@ -797,6 +830,8 @@ if (!app.requestSingleInstanceLock()) {
   })
 
   app.on('before-quit', () => {
+    // app.quit() (for example Windows shuts down): the control window does not ask.
+    quitting = true
     allowOutputWindowsToClose()
     closePdfWindow()
     audio.closeAudioWindow()

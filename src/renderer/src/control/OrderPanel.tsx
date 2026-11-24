@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react'
 import type { ServiceItem, ServiceState } from '../../../shared/types'
 import { formatTime, strings } from '../strings'
+import { warnIfLive } from './liveBlock'
 import { CaptureDialog } from './CaptureItem'
 import { FolderBox } from './FolderBox'
 import { SharedSection } from './SharedSection'
@@ -49,7 +50,7 @@ export function OrderPanel(props: { state: ServiceState; selectedId: string | nu
           className="tool-btn"
           disabled={!state.undo}
           title={state.undo ? strings.undoHint(state.undo) : strings.nothingToUndo}
-          onClick={() => void api.undo()}
+          onClick={async () => warnIfLive(await api.undo(), strings.liveBlockedUndo)}
         >
           ↶ {strings.undo}
         </button>

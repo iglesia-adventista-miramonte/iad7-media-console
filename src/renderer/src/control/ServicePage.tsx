@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { AudioState, ContentLayer, GroupView, ServiceItem, ServiceState, TextLayer } from '../../../shared/types'
 import { formatTime, strings } from '../strings'
+import { warnIfLive } from './liveBlock'
 import { useAudioState } from './AudioTab'
 import { useScreensState, useServiceState } from './hooks'
 import { BibleMain, BibleSide, useBible } from './BiblePanel'
@@ -107,7 +108,7 @@ export function ServicePage({ onOpenScreens, onOpenStart }: { onOpenScreens: () 
       // Ctrl+Z: undo the last change to the order.
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
         e.preventDefault()
-        void api.undo()
+        void api.undo().then((r) => warnIfLive(r, strings.liveBlockedUndo))
         return
       }
       // The Bible verse list uses ↑ ↓ itself (verse by verse).

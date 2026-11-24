@@ -969,7 +969,8 @@ export interface MediaConsoleApi {
   addFiles(paths: string[]): Promise<AddFilesResult>
   /** Path of a dropped File (Electron no longer gives File.path). */
   pathForFile(file: File): string
-  removeItem(itemId: string): Promise<void>
+  /** Not the item that is on the screens now: returns 'live' and changes nothing. */
+  removeItem(itemId: string): Promise<LiveBlock>
   /** Mark all done items as not done. */
   resetProgress(): Promise<void>
   retryCopy(itemId: string): Promise<void>
@@ -986,7 +987,8 @@ export interface MediaConsoleApi {
   /** Show a file dialog and choose a background picture or video for one song or Bible item. */
   pickItemBackground(itemId: string): Promise<void>
   /** Undo the last change to the order (add, remove, move, copy). */
-  undo(): Promise<void>
+  /** Returns 'live' and changes nothing when the undo would take the item on the screens out of the order. */
+  undo(): Promise<LiveBlock>
 
   // Text styles
   setTextStyle(kind: TextStyleKind, change: Partial<Omit<TextStyle, 'backgroundMedia'>>): Promise<void>
@@ -1031,11 +1033,12 @@ export interface MediaConsoleApi {
   setScreensHidden(hidden: boolean): Promise<void>
 
   // Services
-  newService(): Promise<void>
-  openService(serviceId: string): Promise<void>
+  /** New, open and start-preset change nothing and return 'live' while something is on the screens. */
+  newService(): Promise<LiveBlock>
+  openService(serviceId: string): Promise<LiveBlock>
   renameService(name: string): Promise<void>
   /** Make a new service from this preset and open it. */
-  startPreset(presetId: string): Promise<void>
+  startPreset(presetId: string): Promise<LiveBlock>
   /** Save this service's order and program as a preset. The same name replaces that preset. */
   saveAsPreset(info: PresetInfo): Promise<void>
   /** Change the name, days or time of a preset. */
@@ -1188,8 +1191,12 @@ export interface MediaConsoleApi {
   // Updates
   getUpdate(): Promise<UpdateStatus>
   onUpdateChanged(callback: (status: UpdateStatus) => void): () => void
-  /** Close the app now and install the downloaded version. */
-  installUpdate(): Promise<void>
+  /** Close the app now and install the downloaded version. Returns 'live' (and does nothing) while something is on the screens. */
+  installUpdate(): Promise<LiveBlock>
+  /** The operator closed the control window while something is on the screens. The app did not close. */
+  onCloseBlocked(callback: () => void): () => void
+  /** Close the app, also while something is on the screens (after the operator said yes). */
+  quitApp(): Promise<void>
 
   // Hidden audio window
   onAudioRender(callback: (render: AudioRender) => void): () => void
@@ -1227,3 +1234,9 @@ export interface PdfJob {
   width: number
   height: number
 }
+
+/**
+ * 'live': the action was not done, because something is on the screens (or an
+ * audio item plays) and the action would stop it. null: the action was done.
+ */
+export type LiveBlock = 'live' | null

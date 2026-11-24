@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { ContentLayer, EndAction, ImageFit, ItemSettings, ServiceItem, ServiceState } from '../../../shared/types'
 import { formatTime, strings } from '../strings'
+import { warnIfLive } from './liveBlock'
 import { ScreenView, type PlaybackReport } from '../view/ScreenView'
 import { useAudioDevices } from './AudioTab'
 import { BiblePreview, SongPreview } from './BiblePreview'
@@ -207,7 +208,7 @@ export function NotesAndStatus({ item }: { item: ServiceItem }) {
           {item.youtube && !item.path ? strings.retryDownload : strings.retryCopy}
         </button>
       )}
-      <button className="btn btn-small btn-quiet" onClick={() => void api.removeItem(item.id)}>
+      <button className="btn btn-small btn-quiet" onClick={async () => warnIfLive(await api.removeItem(item.id), strings.liveBlockedRemove)}>
         {strings.remove}
       </button>
     </div>

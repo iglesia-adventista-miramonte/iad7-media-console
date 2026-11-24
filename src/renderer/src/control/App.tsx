@@ -6,6 +6,7 @@ import { ServiceClock } from './ServiceBar'
 import { ScreensPage } from './ScreensPage'
 import { ServicePage } from './ServicePage'
 import { StartScreen } from './StartScreen'
+import { warnIfLive } from './liveBlock'
 
 const api = window.mediaConsole
 
@@ -24,6 +25,14 @@ export function App() {
   useEffect(() => {
     void api.setLiveKeysActive(!startOpen && tab === 'service')
   }, [startOpen, tab])
+  // The operator closed the window while something is live: ask before the screens go dark.
+  useEffect(
+    () =>
+      api.onCloseBlocked(() => {
+        if (window.confirm(strings.closeWhileLive)) void api.quitApp()
+      }),
+    []
+  )
 
   if (startOpen) return state ? <StartScreen state={state} onClose={() => setStartOpen(false)} /> : null
 
@@ -57,7 +66,7 @@ export function App() {
               className="update-chip is-ready"
               title={strings.updateReadyHint}
               onClick={() => {
-                if (window.confirm(strings.updateConfirm(update.available ?? ''))) void api.installUpdate()
+                if (window.confirm(strings.updateConfirm(update.available ?? ''))) void api.installUpdate().then((r) => warnIfLive(r, strings.liveBlockedUpdate))
               }}
             >
               <span className="dot dot-ok" />

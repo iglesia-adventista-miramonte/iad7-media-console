@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { localDate, recommendedPreset } from '../../../shared/presets'
-import type { PresetSummary, ServiceState } from '../../../shared/types'
+import type { LiveBlock, PresetSummary, ServiceState } from '../../../shared/types'
 import { strings } from '../strings'
 import { PresetDialog } from './PresetDialog'
+import { warnIfLive } from './liveBlock'
 
 const api = window.mediaConsole
 
@@ -19,13 +20,17 @@ export function StartScreen({ state, onClose }: { state: ServiceState; onClose: 
   const recent = state.services.filter((s) => s.id !== state.service.id).slice(0, 5)
 
   /** Only one choice counts, also if Enter or a button is pressed twice. */
-  const leaveWith = async (open?: () => Promise<void>) => {
+  const leaveWith = async (open?: () => Promise<LiveBlock>, action = '') => {
     if (leaving.current) return
     leaving.current = true
-    await open?.()
+    // Blocked because something is live: stay on the start screen.
+    if (warnIfLive(await open?.(), action)) {
+      leaving.current = false
+      return
+    }
     onClose()
   }
-  const startRecommended = () => recommended && void leaveWith(() => api.startPreset(recommended.id))
+  const startRecommended = () => recommended && void leaveWith(() => api.startPreset(recommended.id), strings.liveBlockedPreset)
 
   // Enter when no button has the focus. A focused button handles Enter by itself.
   // Space is not used here, because presenter clickers can send it.
@@ -71,7 +76,7 @@ export function StartScreen({ state, onClose }: { state: ServiceState; onClose: 
                 <div key={p.id} className="start-preset">
                   <button
                     className={['start-card', isRecommended ? 'is-suggested' : '', isRecommended && !enterContinues ? 'is-default' : ''].join(' ')}
-                    onClick={() => void leaveWith(() => api.startPreset(p.id))}
+                    onClick={() => void leaveWith(() => api.startPreset(p.id), strings.liveBlockedPreset)}
                   >
                     <span className="start-card-name">{p.name}</span>
                     <span className="dim small">{schedule(p)}</span>
@@ -93,7 +98,7 @@ export function StartScreen({ state, onClose }: { state: ServiceState; onClose: 
             <h2 className="label-inline">{strings.startRecent}</h2>
             <div className="start-recent">
               {recent.map((s) => (
-                <button key={s.id} className="start-recent-row" onClick={() => void leaveWith(() => api.openService(s.id))}>
+                <button key={s.id} className="start-recent-row" onClick={() => void leaveWith(() => api.openService(s.id), strings.liveBlockedOpen)}>
                   <span>{s.name}</span>
                   <span className="dim small">{strings.presetItems(s.items)}</span>
                 </button>
@@ -102,7 +107,7 @@ export function StartScreen({ state, onClose }: { state: ServiceState; onClose: 
           </section>
         )}
 
-        <button className="btn btn-quiet start-empty" onClick={() => void leaveWith(api.newService)}>
+        <button className="btn btn-quiet start-empty" onClick={() => void leaveWith(api.newService, strings.liveBlockedNew)}>
           + {strings.startEmpty}
         </button>
       </div>

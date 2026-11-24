@@ -132,7 +132,7 @@ export const strings = {
   startEmpty: 'Empty service',
   startSuggested: 'Suggested now',
   startLiveNow: 'On the screens now',
-  startLiveWarning: 'Something is on the screens. Starting or opening another service takes it off.',
+  startLiveWarning: 'Something is on the screens. Clear the screens before you start or open another service.',
   startNoPresets: 'No presets yet. Build a playlist, then click "Save as preset" in the bottom bar.',
   startScreenButton: 'Start screen',
   startScreenHint: 'Open the start screen: continue, or start from a preset',
@@ -618,6 +618,17 @@ export const strings = {
   updateConfirm: (version: string) =>
     `Close the app and install version ${version} now?\n\nThe output screens go dark until the app opens again (about 30 seconds). Do not do this during a service.`,
   versionLabel: (version: string) => `Version ${version}`,
+
+  // Actions that would stop what is on the screens
+  liveBlocked: (action: string) =>
+    `You can't ${action} now.\n\nSomething is on the screens (or an audio item plays), and this would stop it.\nClick "Clear all" first (or press Esc two times), then try again.`,
+  liveBlockedNew: 'start a new service',
+  liveBlockedOpen: 'open another service',
+  liveBlockedPreset: 'start a service from a preset',
+  liveBlockedUpdate: 'restart to install the update',
+  liveBlockedRemove: 'remove this item: it is on the screens',
+  liveBlockedUndo: 'undo: the undo would remove the item that is on the screens',
+  closeWhileLive: 'Something is on the screens now. Closing Media Console takes it off the screens.\n\nClose anyway?',
   connected: 'connected',
   notConnected: 'not connected',
   audioHere: 'sound',

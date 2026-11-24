@@ -339,6 +339,11 @@ The Order tab is labeled "Playlist" in the app. This document and the code still
 - **One slim bar (about 44 px), always visible.** From left to right:
   the loaded service (selector, rename ✎, + New), hotkeys, music summary,
   and the Audio / Message / Stage buttons.
+- **Nothing stops the live screens by accident.** While something is on a
+  screen (or an audio item plays), + New, opening another service, starting a
+  preset, "Restart now" for an update, removing the live item, and an Undo that
+  would remove the live item are not done: a message says to clear the screens
+  first. Closing the control window asks "Close anyway?".
 - A button opens its **drawer** above the bar (max 300 px, closed by default).
   A second click closes it. The drawer pushes the content up; it never covers
   the Live panel or the preview. Esc does not close it (Esc twice clears the screens).

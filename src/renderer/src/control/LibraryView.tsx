@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Favorite, ItemType, LibEntry, ServiceItem, ServiceState } from '../../../shared/types'
 import { strings } from '../strings'
+import { warnIfLive } from './liveBlock'
 import { TypeIcon } from './OrderPanel'
 
 const api = window.mediaConsole
@@ -299,7 +300,7 @@ function PastServiceView({ state, id }: { state: ServiceState; id: string }) {
         <button className="btn btn-primary" disabled={items.length === 0} onClick={() => void api.copyOrderFrom(id)}>
           {strings.copyOrder}
         </button>
-        <button className="btn" onClick={() => void api.openService(id)}>
+        <button className="btn" onClick={async () => warnIfLive(await api.openService(id), strings.liveBlockedOpen)}>
           {strings.openThisService}
         </button>
       </div>

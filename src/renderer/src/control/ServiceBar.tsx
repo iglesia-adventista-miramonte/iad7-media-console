@@ -3,6 +3,7 @@ import type { ServiceState } from '../../../shared/types'
 import { strings } from '../strings'
 import { formatClock, formatCountdown, useNow } from '../view/clock'
 import { PresetDialog } from './PresetDialog'
+import { warnIfLive } from './liveBlock'
 
 const api = window.mediaConsole
 
@@ -51,7 +52,7 @@ export function ServiceBar({ state, onOpenStart }: { state: ServiceState; onOpen
         <select
           className="input select service-select"
           value={state.service.id}
-          onChange={(e) => void api.openService(e.target.value)}
+          onChange={async (e) => warnIfLive(await api.openService(e.target.value), strings.liveBlockedOpen)}
           onDoubleClick={() => setEditing(true)}
           title={strings.renameHint}
         >
@@ -67,7 +68,7 @@ export function ServiceBar({ state, onOpenStart }: { state: ServiceState; onOpen
       <button className="btn btn-small btn-quiet" title={strings.renameService} onClick={() => setEditing(true)}>
         ✎
       </button>
-      <button className="btn btn-small btn-quiet" onClick={() => void api.newService()}>
+      <button className="btn btn-small btn-quiet" onClick={async () => warnIfLive(await api.newService(), strings.liveBlockedNew)}>
         + {strings.newService}
       </button>
       <button className="btn btn-small btn-quiet" title={strings.saveAsPresetHint} disabled={state.service.items.length === 0} onClick={() => setSavingPreset(true)}>
