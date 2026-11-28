@@ -1,5 +1,10 @@
 # Changes
 
+## 2.3.0 – 2026-11-28
+
+- New corner clock: a small clock with the time now, in a corner of one screen, for the person in front who can see only that screen. It stays above everything, also above a PowerPoint or a browser after "Hide screens". Set it up on the Setup tab under "Corner clock": the screen, the corner, the size, seconds, and a dark box behind the numbers. The Stage drawer has a quick on/off. While it shows, the preview of that screen in the Screens column shows it too, and the screen has a "Clock" tag.
+- New "Copy of the sound for the stream (vMix)" in the Audio tab: all the sound of the app (music, audio items, videos) also plays on a second device, with the same volume and fades. Choose a virtual audio cable there and use it as an audio input in vMix. The sound in the room does not change.
+
 ## 2.2.0 – 2026-11-23
 
 - The app is now in Spanish. On the Setup tab, "Idioma / Language" switches between Español and English. The change shows at once on every screen, also on the output screens and the phone remote, and a video that is live keeps playing. Hymns and the Bible do not change.
