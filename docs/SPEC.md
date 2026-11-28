@@ -360,6 +360,16 @@ The Order tab is labeled "Playlist" in the app. This document and the code still
   - Separate volume: background music and video/items.
   - Output level meter (L/R).
   - Output device selector (`setSinkId`).
+  - **Copy of the sound for the stream (vMix).** A second device selector
+    ("Off" by default). All the sound of the app (background music, audio
+    items, video sound) also plays on this device, with the same volume, fades
+    and auto duck. The sound on the main device does not change. Use: choose a
+    virtual audio cable (for example VB-Audio Virtual Cable, "CABLE Input"),
+    and in vMix add the other end ("CABLE Output") as an audio input. How: each
+    player takes a copy of its sound (`captureStream`), applies its own volume
+    (the copy does not include the element volume) and plays it on a hidden
+    `<audio>` element with `setSinkId`. No copy when the second device is the
+    same as the device the sound already plays on.
   - Auto duck: lower background music when a video plays.
   - Start background music after the last item.
 - **Message tab:** lower-third text (name and role, urgent notice). Saved
@@ -431,6 +441,22 @@ See `docs/design/Preview-*.dc.html`.
 
 - Layout switch on the Stage card in the Screens column: **Stage** (the layout above) or **Full screen** (only what the audience sees, on the whole screen, for example a lyric video for the singers). Stage messages show on top in both. The choice is saved with the group.
 
+### 7.1 Corner clock (above everything)
+
+- A small clock with the time now (24-hour, optional seconds) in one corner
+  of one output screen. For the presenter, for example over a presentation.
+- It is above everything: above the app's output windows and above other
+  programs, also after "Hide screens" (for example a guest's PowerPoint slide
+  show on the projector).
+- Setup page, "Corner clock": on/off, the screen (a named output), the corner,
+  the size (3–40 % of the screen height), seconds, and a dark box behind the
+  numbers. The Stage drawer has a quick on/off. Saved in settings.
+- How (`src/main/clockWindow.ts`): its own small window, frameless,
+  transparent, always on top, takes no focus, mouse clicks pass through. It
+  is put in front again every 2 s and after "Hide screens" changes, because on
+  Windows the always-on-top window raised last is in front. It is not shown
+  on the console screen, and it closes when its screen is not connected.
+
 ## 8. Idle screen (instead of the desktop wallpaper)
 
 - Output windows never close during the service.
@@ -463,6 +489,9 @@ See `docs/design/Preview-*.dc.html`.
 - Hymn source: .pptx files, text files, or both? Real numbering?
 - Does the graphics card drive 3 separate (extended) screens? Test once.
 - Is a Lobby screen needed (screen 4)?
+- NDI output to vMix (each output screen as its own NDI source, with sound),
+  instead of the vMix desktop capture? Needs a native NDI module and the NDI
+  runtime on the church PC. Not started.
 
 ## 11. Remote control (local network)
 

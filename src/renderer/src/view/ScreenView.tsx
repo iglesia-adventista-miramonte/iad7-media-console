@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { ContentLayer, OutputRender, Overlays, TextLayer } from '../../../shared/types'
 import { formatCountdown, useNow } from './clock'
-import { applyDevice, meterElement } from './levelMeter'
+import { applyDevice, copySound, meterElement, wantsCopy } from './levelMeter'
 import { TextView } from './TextView'
 import { strings } from '../strings'
 import './view.css'
@@ -33,6 +33,7 @@ export interface ScreenViewProps {
   /** Sound of videos: master volume (0..1) and output device. Only used with `audio`. */
   itemsVolume?: number
   audioDevice?: string
+  streamDevice?: string
   /** Window capture: pictures per second. Small copies use fewer, so the computer does less work. */
   captureFps?: number
   /** Window capture: say on the picture when the window cannot be shown (preview only, never on a screen). */
@@ -67,6 +68,7 @@ export function ScreenView(props: ScreenViewProps) {
           syncTime={props.syncTime}
           itemsVolume={props.itemsVolume ?? 1}
           audioDevice={props.audioDevice ?? ''}
+          streamDevice={props.streamDevice ?? ''}
         />
       )}
       {content?.ended && content.settings.endAction === 'black' && <div className="layer layer-black" />}
@@ -249,6 +251,7 @@ function VideoContent(props: {
   syncTime?: number
   itemsVolume: number
   audioDevice: string
+  streamDevice: string
 }) {
   const { content, audio, onPlayback, syncTime, itemsVolume } = props
   const s = content.settings
@@ -270,6 +273,9 @@ function VideoContent(props: {
     if (!audio || !ref.current) return
     return meterElement(ref.current, (l, r) => window.mediaConsole.audioLevels('video', l, r))
   }, [audio])
+  // A copy of the sound for the live stream (vMix), on the second device.
+  const copy = audio && wantsCopy(props.streamDevice, device)
+  useEffect(() => (copy && ref.current ? copySound(ref.current, props.streamDevice) : undefined), [copy, props.streamDevice])
 
   // Play or pause when the control window says so.
   useEffect(() => {

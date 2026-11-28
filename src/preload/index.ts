@@ -2,6 +2,8 @@ import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'ele
 import type {
   AudioRender,
   AudioState,
+  ClockRender,
+  ClockSettings,
   HymnalState,
   Language,
   MediaConsoleApi,
@@ -121,6 +123,10 @@ const api: MediaConsoleApi = {
   addSharedToOrder: (paths) => invoke('shared:add', paths),
   markSharedSeen: (paths) => invoke('shared:seen', paths),
 
+  // Corner clock
+  getClock: () => invoke('clock:get'),
+  updateClock: (change) => invoke('clock:update', change),
+  onClockRender: (cb) => listen<ClockRender>('clock:render', cb),
   // Remote control
   getRemote: () => invoke('remote:get'),
   onRemoteChanged: (cb) => listen<RemoteStatus>('remote:changed', cb),

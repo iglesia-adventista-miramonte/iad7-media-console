@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Language, GroupConfig, GroupView, OutputStatus, ScreenInfo, ScreensState, ServiceState } from '../../../shared/types'
 import { languageNames, strings } from '../strings'
 import { ClickerSection } from './ClickerSection'
+import { ClockSection } from './ClockSection'
 import { GroupsEditor, LogoSection } from './GroupsEditor'
 import { useScreensState, useServiceState } from './hooks'
 import { RemoteSection } from './RemoteSection'
@@ -73,6 +74,7 @@ export function ScreensPage() {
       <GroupsEditor state={state} />
       <LogoSection state={state} />
       <LanguageSection />
+      <ClockSection outputs={state.outputs} />
       <RemoteSection />
       <ClickerSection />
     </main>

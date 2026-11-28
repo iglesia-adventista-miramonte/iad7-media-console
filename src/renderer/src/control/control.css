@@ -3115,3 +3115,11 @@
 .audio-wave {
   margin: 8px 0 12px;
 }
+
+/* Setup › Corner clock: the size slider. */
+.clock-size input[type='range'] {
+  width: 180px;
+}
+.remote-row + .remote-row {
+  margin-top: 10px;
+}

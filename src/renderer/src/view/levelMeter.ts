@@ -58,3 +58,60 @@ export function applyDevice(el: HTMLMediaElement | null, device: string): void {
   if (!m?.setSinkId || m.sinkId === device) return
   m.setSinkId(device).catch((err) => console.warn('Could not use the audio device', device, err))
 }
+
+/**
+ * Play a copy of the sound of a media element on a second output device (for
+ * example a virtual audio cable that vMix uses as an input), while the element
+ * keeps playing on its own device. The captured sound does not include the
+ * element's volume, so the copy follows `volume` and `muted` itself: fades and
+ * auto duck reach the copy too. Returns a function that stops the copy.
+ */
+export function copySound(el: HTMLMediaElement, device: string): () => void {
+  const capture = (el as HTMLMediaElement & { captureStream?: () => MediaStream }).captureStream
+  if (!capture) return () => {}
+  const ctx = new AudioContext()
+  const gain = ctx.createGain()
+  const out = ctx.createMediaStreamDestination()
+  gain.connect(out)
+  const player = new Audio() as HTMLAudioElement & { setSinkId?: (id: string) => Promise<void> }
+  player.srcObject = out.stream
+  let source: MediaStreamAudioSourceNode | null = null
+  let stopped = false
+
+  const follow = () => gain.gain.setTargetAtTime(el.muted ? 0 : el.volume, ctx.currentTime, 0.02)
+  follow()
+
+  // The stream has audio only after the media starts playing.
+  const connect = () => {
+    if (source || stopped) return
+    const stream = capture.call(el)
+    if (stream.getAudioTracks().length === 0) return
+    source = ctx.createMediaStreamSource(stream)
+    source.connect(gain)
+  }
+  el.addEventListener('playing', connect)
+  el.addEventListener('volumechange', follow)
+  if (!el.paused) connect()
+
+  const start = player.setSinkId ? player.setSinkId(device) : Promise.resolve()
+  start
+    .then(() => (stopped ? undefined : player.play()))
+    .catch((err) => console.warn('Could not send a copy of the sound to', device, err))
+
+  return () => {
+    stopped = true
+    el.removeEventListener('playing', connect)
+    el.removeEventListener('volumechange', follow)
+    source?.disconnect()
+    player.pause()
+    player.srcObject = null
+    void ctx.close()
+  }
+}
+
+/** The second device gets a copy only when it is set and is not the device the element already plays on. */
+export function wantsCopy(streamDevice: string, device: string): boolean {
+  if (!streamDevice) return false
+  const same = (a: string) => (a === '' || a === 'default' ? 'default' : a)
+  return same(streamDevice) !== same(device)
+}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ServiceState } from '../../../shared/types'
 import { strings } from '../strings'
+import { ClockToggle } from './ClockSection'
 import { ProgramEditor } from './ProgramEditor'
 import { formatCountdown, useNow } from '../view/clock'
 import { timerColor, timerSeconds } from '../view/StageView'
@@ -55,6 +56,7 @@ export function StageTab({ state }: { state: ServiceState }) {
             {strings.reset}
           </button>
         </div>
+        <ClockToggle />
       </div>
       <div className="drawer-col">
         <span className="label-inline">{strings.stageMessagesLabel}</span>

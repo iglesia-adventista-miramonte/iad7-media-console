@@ -37,6 +37,7 @@ export function outputRenders(settings: Settings, openIds: string[]): Map<string
       audioTakes: owners.get(outputId) ?? [],
       itemsVolume: audioSettings().itemsVolume,
       audioDevice: audioSettings().device,
+      streamDevice: audioSettings().streamDevice ?? '',
       content: group ? svc.groupLive(group.id).content : null,
       text: group ? svc.groupLive(group.id).text : null,
       idle: { kind: group?.idle ?? 'black', media, interval: group?.idleInterval ?? 8 },

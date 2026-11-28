@@ -30,6 +30,7 @@ export function LiveOutput() {
       audio={audio}
       itemsVolume={render.itemsVolume}
       audioDevice={render.audioDevice}
+      streamDevice={render.streamDevice}
       // Only the output with the sound reports the time, so there is one source of truth.
       onPlayback={audio ? (r) => api.reportPlayback(r) : undefined}
     />

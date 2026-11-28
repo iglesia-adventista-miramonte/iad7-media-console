@@ -587,6 +587,10 @@ const en = {
   outputLevel: 'Output level',
   outputDevice: 'Output device',
   defaultDevice: 'System default',
+  streamDevice: 'Copy of the sound for the stream (vMix)',
+  streamDeviceOff: 'Off',
+  streamDeviceHint:
+    'All the sound of the app (music, audio items, videos) also plays on this device, with the same volume and fades. Choose a virtual audio cable here and use it as an audio input in vMix. The sound in the room does not change.',
   mainDevice: 'Main output device',
   autoDuck: 'Lower background music when a video plays (auto duck)',
   startAfterLast: 'Start background music after the last item',
@@ -771,6 +775,23 @@ const en = {
   rFadeOut: 'Fade out',
   rAudioItem: (title: string) => `Audio: ${title}`,
   // Language setting (Setup page)
+  cornerClockLabel: 'Corner clock',
+  cornerClockHelp:
+    'A small clock with the time now, in a corner of one screen, above everything: above the app and above other programs (for example a PowerPoint slide show after "Hide screens"). For the presenter. Clicks go through it.',
+  cornerClockOn: 'Show the corner clock',
+  cornerClockScreen: 'Screen',
+  cornerClockNoScreen: '— Choose a screen —',
+  cornerClockCorner: 'Corner',
+  cornerTopLeft: 'Top left',
+  cornerTopRight: 'Top right',
+  cornerBottomLeft: 'Bottom left',
+  cornerBottomRight: 'Bottom right',
+  cornerClockSize: 'Size',
+  cornerClockSeconds: 'Show seconds',
+  cornerClockBackground: 'Dark box behind the numbers',
+  cornerClockPickScreen: 'Choose a screen for the clock.',
+  cornerClockNotConnected: 'That screen is not connected now. The clock shows when it is connected again.',
+  cornerClockSetUpFirst: 'Corner clock: choose its screen in Setup first',
   languageLabel: 'Language',
   languageHelp: 'The language of the buttons and messages of the app. Hymns and the Bible do not change.'
 }
@@ -1351,6 +1372,10 @@ const es: typeof en = {
   outputLevel: 'Nivel de salida',
   outputDevice: 'Dispositivo de salida',
   defaultDevice: 'Predeterminado del sistema',
+  streamDevice: 'Copia del sonido para la transmisión (vMix)',
+  streamDeviceOff: 'Apagado',
+  streamDeviceHint:
+    'Todo el sonido de la aplicación (música, audios, videos) suena también en este dispositivo, con el mismo volumen y los mismos desvanecidos. Elija aquí un cable de audio virtual y úselo como entrada de audio en vMix. El sonido en el templo no cambia.',
   mainDevice: 'Dispositivo de salida principal',
   autoDuck: 'Bajar la música de fondo cuando suena un video',
   startAfterLast: 'Iniciar la música de fondo después del último elemento',
@@ -1537,6 +1562,23 @@ const es: typeof en = {
   rFadeOut: 'Bajar',
   rAudioItem: (title: string) => `Audio: ${title}`,
   // Language setting (Setup page)
+  cornerClockLabel: 'Reloj en la esquina',
+  cornerClockHelp:
+    'Un reloj pequeño con la hora actual, en una esquina de una pantalla, encima de todo: encima de la aplicación y de otros programas (por ejemplo una presentación de PowerPoint después de "Ocultar pantallas"). Para el presentador. Los clics pasan a través de él.',
+  cornerClockOn: 'Mostrar el reloj en la esquina',
+  cornerClockScreen: 'Pantalla',
+  cornerClockNoScreen: '— Elija una pantalla —',
+  cornerClockCorner: 'Esquina',
+  cornerTopLeft: 'Arriba a la izquierda',
+  cornerTopRight: 'Arriba a la derecha',
+  cornerBottomLeft: 'Abajo a la izquierda',
+  cornerBottomRight: 'Abajo a la derecha',
+  cornerClockSize: 'Tamaño',
+  cornerClockSeconds: 'Mostrar segundos',
+  cornerClockBackground: 'Fondo oscuro detrás de los números',
+  cornerClockPickScreen: 'Elija una pantalla para el reloj.',
+  cornerClockNotConnected: 'Esa pantalla no está conectada ahora. El reloj se muestra cuando se conecte de nuevo.',
+  cornerClockSetUpFirst: 'Reloj en la esquina: primero elija su pantalla en Configuración',
   languageLabel: 'Idioma',
   languageHelp: 'El idioma de los botones y mensajes de la aplicación. Los himnos y la Biblia no cambian.'
 }

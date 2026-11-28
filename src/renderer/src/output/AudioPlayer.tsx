@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { AudioRender } from '../../../shared/types'
-import { applyDevice, meterElement } from '../view/levelMeter'
+import { applyDevice, copySound, meterElement, wantsCopy } from '../view/levelMeter'
 
 const api = window.mediaConsole
 
@@ -14,8 +14,8 @@ export function AudioPlayer() {
   if (!render) return null
   return (
     <>
-      {render.music && <Music key={render.music.take} music={render.music} device={render.device} />}
-      {render.item && <ItemAudio key={render.item.take} item={render.item} device={render.device} />}
+      {render.music && <Music key={render.music.take} music={render.music} device={render.device} streamDevice={render.streamDevice} />}
+      {render.item && <ItemAudio key={render.item.take} item={render.item} device={render.device} streamDevice={render.streamDevice} />}
     </>
   )
 }
@@ -40,13 +40,20 @@ function useSmoothVolume(ref: React.RefObject<HTMLAudioElement | null>, target: 
   }, [target, seconds])
 }
 
-function Music({ music, device }: { music: NonNullable<AudioRender['music']>; device: string }) {
+/** Send a copy of the sound to the stream device (for vMix), when one is set. */
+function useCopy(ref: React.RefObject<HTMLAudioElement | null>, device: string, streamDevice: string): void {
+  const on = wantsCopy(streamDevice, device)
+  useEffect(() => (on && ref.current ? copySound(ref.current, streamDevice) : undefined), [on, streamDevice])
+}
+
+function Music({ music, device, streamDevice }: { music: NonNullable<AudioRender['music']>; device: string; streamDevice: string }) {
   const ref = useRef<HTMLAudioElement>(null)
   const lastReport = useRef(0)
   const fading = !!music.fadeOutId
   useSmoothVolume(ref, fading ? 0 : music.volume, fading ? 3 : 1)
 
   useEffect(() => applyDevice(ref.current, device), [device])
+  useCopy(ref, device, streamDevice)
   useEffect(() => {
     const el = ref.current
     if (!el) return
@@ -75,10 +82,11 @@ function Music({ music, device }: { music: NonNullable<AudioRender['music']>; de
   )
 }
 
-function ItemAudio({ item, device }: { item: NonNullable<AudioRender['item']>; device: string }) {
+function ItemAudio({ item, device, streamDevice }: { item: NonNullable<AudioRender['item']>; device: string; streamDevice: string }) {
   const ref = useRef<HTMLAudioElement>(null)
   const lastReport = useRef(0)
   useEffect(() => applyDevice(ref.current, device), [device])
+  useCopy(ref, device, streamDevice)
   useEffect(() => {
     if (ref.current) ref.current.volume = item.volume
   }, [item.volume])

@@ -74,3 +74,28 @@ body {
   border-bottom-width: 1vmin;
   border-right-width: 1vmin;
 }
+
+/* Corner clock window (SPEC 7.1): transparent, only the time shows. */
+html.clock-page,
+html.clock-page body,
+html.clock-page #root {
+  background: transparent;
+}
+.corner-clock {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-weight: 600;
+  font-size: 72vh;
+  line-height: 1;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 2vh #000, 0 0 6vh #000;
+  white-space: nowrap;
+}
+.corner-clock-box {
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 14vh;
+}

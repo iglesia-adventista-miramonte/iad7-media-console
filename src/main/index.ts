@@ -8,6 +8,7 @@ import type {
   BibleOptions,
   BibleRef,
   ClickerAction,
+  ClockSettings,
   GroupConfig,
   HymnAudio,
   HymnChoice,
@@ -59,6 +60,7 @@ import { outputRenders } from './render'
 import * as remote from './remote'
 import * as svc from './service'
 import * as clicker from './clicker'
+import { closeClock, defaultClockSettings, raiseClock, syncClock } from './clockWindow'
 import * as presets from './presets'
 import { createService, loadService, withUniqueName } from './serviceStore'
 import { loadSettings, saveSettings } from './settings'
@@ -197,6 +199,8 @@ function renderOutputs(): void {
 function syncOutputs(): void {
   syncOutputWindows(openableOutputs(), () => renderOutputs())
   renderOutputs()
+  // The clock follows its screen (and stays in front of the output windows).
+  syncClock(settings.clock, openableOutputs())
 }
 
 /** After outputs, groups, idle files or the logo change. */
@@ -535,7 +539,18 @@ function registerIpc(): void {
   ipcMain.handle('live:clearText', (_e, groupId?: string) => svc.clearText(groupId))
   ipcMain.handle('live:hideScreens', (_e, hidden: boolean) => {
     setOutputsHidden(!!hidden)
+    raiseClock()
     sendServiceState()
+  })
+
+  // ---- Corner clock (SPEC 7.1) ----
+  const clockSettings = (): ClockSettings => ({ ...defaultClockSettings(), ...settings.clock })
+  ipcMain.handle('clock:get', () => clockSettings())
+  ipcMain.handle('clock:update', (_e, change: Partial<ClockSettings>) => {
+    settings.clock = { ...clockSettings(), ...change }
+    saveSettings(settings)
+    syncClock(settings.clock, openableOutputs())
+    return clockSettings()
   })
 
   // ---- Bible ----
@@ -853,6 +868,7 @@ if (!app.requestSingleInstanceLock()) {
     allowOutputWindowsToClose()
     closePdfWindow()
     audio.closeAudioWindow()
+    closeClock()
     shared.stopShared()
     clicker.stopClicker()
     remote.stopRemote()

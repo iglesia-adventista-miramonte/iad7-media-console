@@ -208,6 +208,19 @@ export function AudioTab() {
               ))}
           </select>
         </label>
+        <label className="field-col" title={strings.streamDeviceHint}>
+          <span className="label-inline">{strings.streamDevice}</span>
+          <select className="input select" value={a.streamDevice ?? ''} onChange={(e) => void api.updateAudio({ streamDevice: e.target.value })}>
+            <option value="">{strings.streamDeviceOff}</option>
+            {devices
+              .filter((d) => d.deviceId !== 'default')
+              .map((d) => (
+                <option key={d.deviceId} value={d.deviceId}>
+                  {d.label || d.deviceId.slice(0, 12)}
+                </option>
+              ))}
+          </select>
+        </label>
         <label className="check small">
           <input type="checkbox" checked={a.autoDuck} onChange={(e) => void api.updateAudio({ autoDuck: e.target.checked })} />
           {strings.autoDuck}

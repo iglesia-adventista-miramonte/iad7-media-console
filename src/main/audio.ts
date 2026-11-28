@@ -40,7 +40,7 @@ let onItemTime: (itemId: string, time: number) => void = () => {}
 let notifyTimer: NodeJS.Timeout | null = null
 
 export function defaultAudioSettings(): AudioSettings {
-  return { playlist: [], shuffle: false, musicVolume: 0.35, itemsVolume: 0.8, device: '', autoDuck: true, startAfterLast: false }
+  return { playlist: [], shuffle: false, musicVolume: 0.35, itemsVolume: 0.8, device: '', streamDevice: '', autoDuck: true, startAfterLast: false }
 }
 
 export function audioSettings(): AudioSettings {
@@ -118,6 +118,7 @@ function render(): void {
   const track = a.playlist[index]
   const r: AudioRender = {
     device: a.device,
+    streamDevice: a.streamDevice ?? '',
     music: track?.url
       ? { url: track.url, take: musicTake, playing, volume: a.musicVolume * (ducked ? duckLevel : 1), fadeOutId: fadeOutId || undefined }
       : null,

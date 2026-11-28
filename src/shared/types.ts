@@ -96,6 +96,32 @@ export interface Settings {
   youtube?: YoutubeChoices
   /** The language of the app's buttons and messages. Not set: Spanish. */
   language?: Language
+  /** The corner clock above everything on one screen (SPEC 7.1). */
+  clock?: ClockSettings
+}
+
+// ---- Corner clock (SPEC 7.1) ----
+
+export type ClockCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+
+export interface ClockSettings {
+  /** Show the clock now. */
+  enabled: boolean
+  /** The output screen that shows the clock. */
+  outputId: string | null
+  corner: ClockCorner
+  /** Height of the clock in % of the screen height (3..40). */
+  size: number
+  /** Show seconds too ("10:42:05"). */
+  seconds: boolean
+  /** A dark box behind the numbers, so they can be read on any slide. */
+  background: boolean
+}
+
+/** What the clock window must show. */
+export interface ClockRender {
+  seconds: boolean
+  background: boolean
 }
 
 /** The languages of the app's buttons and messages. */
@@ -488,6 +514,12 @@ export interface AudioSettings {
   itemsVolume: number
   /** Audio output device id ('' = the system default). */
   device: string
+  /**
+   * A second output device that gets a copy of all the sound (music, audio
+   * items, videos), for example a virtual audio cable that vMix uses as an
+   * audio input for the live stream. '' or missing = no copy.
+   */
+  streamDevice?: string
   /** Lower the background music when a video plays. */
   autoDuck: boolean
   /** Start the background music when the last item of the order ends. */
@@ -536,6 +568,8 @@ export interface Waveform {
 /** What the hidden audio window must play. */
 export interface AudioRender {
   device: string
+  /** The device that gets a copy of the sound ('' = none). */
+  streamDevice: string
   music: { url: string; take: number; playing: boolean; volume: number; fadeOutId?: number } | null
   item: { url: string; take: number; playing: boolean; volume: number; seekTo?: number; seekId?: number } | null
 }
@@ -947,6 +981,8 @@ export interface OutputRender {
   /** Sound of videos: master volume (0..1) and output device. */
   itemsVolume: number
   audioDevice: string
+  /** The device that gets a copy of the video sound ('' = none). */
+  streamDevice: string
   content: ContentLayer | null
   text: TextLayer | null
   idle: { kind: IdleKind; media: { type: 'image' | 'video'; url: string }[]; interval: number }
@@ -1196,6 +1232,13 @@ export interface MediaConsoleApi {
   onRemoteChanged(callback: (status: RemoteStatus) => void): () => void
   /** Turn the remote on or off, or change the PIN or the port. */
   updateRemote(change: Partial<RemoteSettings>): Promise<RemoteStatus>
+
+  // Corner clock (SPEC 7.1)
+  getClock(): Promise<ClockSettings>
+  /** Turn the clock on or off, or change its screen, corner, size or look. */
+  updateClock(change: Partial<ClockSettings>): Promise<ClockSettings>
+  /** The clock window: what to show. */
+  onClockRender(callback: (render: ClockRender) => void): () => void
 
   // Presenter clicker
   getClicker(): Promise<ClickerStatus>
