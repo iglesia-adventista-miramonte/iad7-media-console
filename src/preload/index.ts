@@ -126,6 +126,7 @@ const api: MediaConsoleApi = {
   // Corner clock
   getClock: () => invoke('clock:get'),
   updateClock: (change) => invoke('clock:update', change),
+  onClockChanged: (cb) => listen<ClockSettings>('clock:changed', cb),
   onClockRender: (cb) => listen<ClockRender>('clock:render', cb),
   // Remote control
   getRemote: () => invoke('remote:get'),

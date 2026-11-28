@@ -3,6 +3,7 @@ import { formatTime, strings } from '../strings'
 import { ScreenView } from '../view/ScreenView'
 import { StageView } from '../view/StageView'
 import { useAudioState } from './AudioTab'
+import { PreviewClock, useClock } from './ClockSection'
 import { iconFor, TypeIcon } from './OrderPanel'
 
 const api = window.mediaConsole
@@ -129,6 +130,9 @@ function GroupCard({ group, state, screens }: { group: GroupView; state: Service
   const playback = content ? state.playback[content.take] : undefined
   const outputs = (screens?.outputs ?? []).filter((o) => config.outputIds.includes(o.output.id))
   const isTarget = state.target === 'all' || state.target === config.id
+  // The corner clock (SPEC 7.1) shows on the preview when it is on and its screen is in this group and connected.
+  const [clock] = useClock()
+  const clockOutput = clock?.enabled ? outputs.find((o) => o.output.id === clock.outputId && o.screen) : undefined
 
   return (
     <div className={content || live.text ? 'group-card is-live' : 'group-card'}>
@@ -155,6 +159,7 @@ function GroupCard({ group, state, screens }: { group: GroupView; state: Service
       )}
       <div className="mini">
         <GroupLiveView group={group} state={state} />
+        {clock && clockOutput && <PreviewClock clock={clock} />}
       </div>
       {content && item ? (
         <div className="group-now">
@@ -181,6 +186,7 @@ function GroupCard({ group, state, screens }: { group: GroupView; state: Service
         <div key={o.output.id} className="group-output">
           <span className={o.screen ? 'dot dot-ok' : 'dot dot-warn'} />
           <span className="group-output-name">{o.output.name}</span>
+          {o === clockOutput && <span className="badge">{strings.cornerClockBadge}</span>}
           <span className="dim">{o.screen ? strings.connected : strings.notConnected}</span>
         </div>
       ))}

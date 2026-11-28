@@ -792,6 +792,7 @@ const en = {
   cornerClockPickScreen: 'Choose a screen for the clock.',
   cornerClockNotConnected: 'That screen is not connected now. The clock shows when it is connected again.',
   cornerClockSetUpFirst: 'Corner clock: choose its screen in Setup first',
+  cornerClockBadge: 'Clock',
   languageLabel: 'Language',
   languageHelp: 'The language of the buttons and messages of the app. Hymns and the Bible do not change.'
 }
@@ -1579,6 +1580,7 @@ const es: typeof en = {
   cornerClockPickScreen: 'Elija una pantalla para el reloj.',
   cornerClockNotConnected: 'Esa pantalla no está conectada ahora. El reloj se muestra cuando se conecte de nuevo.',
   cornerClockSetUpFirst: 'Reloj en la esquina: primero elija su pantalla en Configuración',
+  cornerClockBadge: 'Reloj',
   languageLabel: 'Idioma',
   languageHelp: 'El idioma de los botones y mensajes de la aplicación. Los himnos y la Biblia no cambian.'
 }

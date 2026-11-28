@@ -451,6 +451,8 @@ See `docs/design/Preview-*.dc.html`.
 - Setup page, "Corner clock": on/off, the screen (a named output), the corner,
   the size (3–40 % of the screen height), seconds, and a dark box behind the
   numbers. The Stage drawer has a quick on/off. Saved in settings.
+- While the clock shows, the preview of its group in the Screens column
+  shows it too (same corner and size), and its screen has a "Clock" tag.
 - How (`src/main/clockWindow.ts`): its own small window, frameless,
   transparent, always on top, takes no focus, mouse clicks pass through. It
   is put in front again every 2 s and after "Hide screens" changes, because on

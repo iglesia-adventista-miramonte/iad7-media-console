@@ -550,6 +550,8 @@ function registerIpc(): void {
     settings.clock = { ...clockSettings(), ...change }
     saveSettings(settings)
     syncClock(settings.clock, openableOutputs())
+    // The Setup page, the Stage drawer and the screen previews show the clock settings.
+    controlWindow?.webContents.send('clock:changed', clockSettings())
     return clockSettings()
   })
 

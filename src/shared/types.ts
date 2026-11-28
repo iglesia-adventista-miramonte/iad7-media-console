@@ -1237,6 +1237,8 @@ export interface MediaConsoleApi {
   getClock(): Promise<ClockSettings>
   /** Turn the clock on or off, or change its screen, corner, size or look. */
   updateClock(change: Partial<ClockSettings>): Promise<ClockSettings>
+  /** The clock settings changed (from the Setup page or the Stage drawer). */
+  onClockChanged(callback: (settings: ClockSettings) => void): () => void
   /** The clock window: what to show. */
   onClockRender(callback: (render: ClockRender) => void): () => void
 

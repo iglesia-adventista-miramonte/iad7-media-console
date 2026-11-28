@@ -3117,6 +3117,29 @@
 }
 
 /* Setup › Corner clock: the size slider. */
+/* The corner clock on a screen preview (SPEC 7.1). Same look as .corner-clock in output.css. */
+.preview-clock {
+  position: absolute;
+  z-index: 2;
+  container-type: size;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-weight: 600;
+  line-height: 1;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.preview-clock > span {
+  font-size: 72cqh;
+  text-shadow: 0 0 2cqh #000, 0 0 6cqh #000;
+}
+.preview-clock-box {
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 14cqh;
+}
 .clock-size input[type='range'] {
   width: 180px;
 }

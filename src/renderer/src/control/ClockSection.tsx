@@ -1,14 +1,47 @@
 import { useEffect, useState } from 'react'
 import type { ClockCorner, ClockSettings, OutputStatus } from '../../../shared/types'
+import { formatClock, useNow } from '../view/clock'
 import { strings } from '../strings'
 
 const api = window.mediaConsole
 
-/** The corner clock settings, read when the component opens. */
-function useClock(): [ClockSettings | null, (change: Partial<ClockSettings>) => void] {
+/** The corner clock settings: read when the component opens, then kept up to date. */
+export function useClock(): [ClockSettings | null, (change: Partial<ClockSettings>) => void] {
   const [clock, setClock] = useState<ClockSettings | null>(null)
-  useEffect(() => void api.getClock().then(setClock), [])
+  useEffect(() => {
+    void api.getClock().then(setClock)
+    return api.onClockChanged(setClock)
+  }, [])
   return [clock, (change) => void api.updateClock(change).then(setClock)]
+}
+
+/** Width of the clock for each 1 unit of height. Same numbers as the clock window (src/main/clockWindow.ts). */
+const clockAspect = (seconds: boolean): number => (seconds ? 3.9 : 2.7)
+
+/**
+ * The corner clock drawn on a screen preview (a 16:9 box), in the same corner
+ * and at the same size as on the real screen. Put it inside a box with
+ * `position: relative`.
+ */
+export function PreviewClock({ clock }: { clock: ClockSettings }) {
+  const now = useNow(1000)
+  const size = Math.min(40, Math.max(3, clock.size))
+  // The margin on the real screen is 2 % of the screen height. In a 16:9 box that is 2 % of
+  // the height and 2 × 9/16 % of the width.
+  const vertical = clock.corner.startsWith('top') ? { top: '2%' } : { bottom: '2%' }
+  const horizontal = clock.corner.endsWith('left') ? { left: '1.125%' } : { right: '1.125%' }
+  const time = clock.seconds
+    ? `${formatClock(now)}:${String(new Date(now).getSeconds()).padStart(2, '0')}`
+    : formatClock(now)
+  return (
+    <div
+      className={`preview-clock${clock.background ? ' preview-clock-box' : ''}`}
+      style={{ ...vertical, ...horizontal, height: `${size}%`, aspectRatio: clockAspect(clock.seconds) }}
+      title={strings.cornerClockLabel}
+    >
+      <span>{time}</span>
+    </div>
+  )
 }
 
 /** Setup page: the corner clock above everything on one screen (SPEC 7.1). */
